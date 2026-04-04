@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  DATA
@@ -200,8 +200,25 @@ function Modal({ children, onClose }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  EMPLOYEE FORM
-// ─────────────────────────────────────────────────────────────────────────────
+const InputField = ({ label, k, form, set, errors, placeholder="" }) => (
+  <div>
+    <label className="block text-xs font-semibold uppercase tracking-widest text-white/45 mb-1.5">{label}</label>
+    <input value={form[k] || ""} onChange={e=>set(k,e.target.value)} placeholder={placeholder}
+      className={`w-full rounded-xl border bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:bg-white/8 focus:border-indigo-500 ${errors[k]?"border-red-500":"border-white/10"}`} />
+    {errors[k] && <p className="text-red-400 text-xs mt-1">{errors[k]}</p>}
+  </div>
+);
+
+const SelectField = ({ label, k, form, set, options }) => (
+  <div>
+    <label className="block text-xs font-semibold uppercase tracking-widest text-white/45 mb-1.5">{label}</label>
+    <select value={form[k]} onChange={e=>set(k,e.target.value)}
+      className="w-full rounded-xl border border-white/10 bg-[#0c0f1a] px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all">
+      {options.map(o=><option key={o} value={o}>{o}</option>)}
+    </select>
+  </div>
+);
+
 function EmployeeForm({ initial, onSave, onCancel, mode }) {
   const [form, setForm] = useState({ ...initial });
   const [errors, setErrors] = useState({});
@@ -215,25 +232,6 @@ function EmployeeForm({ initial, onSave, onCancel, mode }) {
     setErrors(e);
     return !Object.keys(e).length;
   }
-
-  const InputField = ({ label, k, placeholder="" }) => (
-    <div>
-      <label className="block text-xs font-semibold uppercase tracking-widest text-white/45 mb-1.5">{label}</label>
-      <input value={form[k]} onChange={e=>set(k,e.target.value)} placeholder={placeholder}
-        className={`w-full rounded-xl border bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:bg-white/8 focus:border-indigo-500 ${errors[k]?"border-red-500":"border-white/10"}`} />
-      {errors[k] && <p className="text-red-400 text-xs mt-1">{errors[k]}</p>}
-    </div>
-  );
-
-  const SelectField = ({ label, k, options }) => (
-    <div>
-      <label className="block text-xs font-semibold uppercase tracking-widest text-white/45 mb-1.5">{label}</label>
-      <select value={form[k]} onChange={e=>set(k,e.target.value)}
-        className="w-full rounded-xl border border-white/10 bg-[#0c0f1a] px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all">
-        {options.map(o=><option key={o} value={o}>{o}</option>)}
-      </select>
-    </div>
-  );
 
   return (
     <div>
@@ -273,14 +271,14 @@ function EmployeeForm({ initial, onSave, onCancel, mode }) {
         <section>
           <p className="text-xs font-bold uppercase tracking-widest text-indigo-400 mb-3">Basic Information</p>
           <div className="grid grid-cols-2 gap-3">
-            <InputField label="Employee ID" k="id" placeholder="DM001" />
-            <InputField label="Full Name"   k="name" placeholder="John Doe" />
-            <InputField label="Job Title"   k="title" placeholder="Senior Designer" />
-            <SelectField label="Department" k="dept" options={ALL_DEPTS.filter(d=>d!=="All")} />
-            <InputField label="Phone Number" k="phone" placeholder="0200000000" />
-            <SelectField label="Employment Status" k="status" options={["Full Time","Contract","Probation"]} />
-            <InputField label="Date of Employment" k="doj" placeholder="DD/MM/YYYY" />
-            <InputField label="Date of Birth"      k="dob" placeholder="DD/MM/YYYY" />
+            <InputField label="Employee ID" k="id" placeholder="DM001" form={form} set={set} errors={errors} />
+            <InputField label="Full Name"   k="name" placeholder="John Doe" form={form} set={set} errors={errors} />
+            <InputField label="Job Title"   k="title" placeholder="Senior Designer" form={form} set={set} errors={errors} />
+            <SelectField label="Department" k="dept" options={ALL_DEPTS.filter(d=>d!=="All")} form={form} set={set} />
+            <InputField label="Phone Number" k="phone" placeholder="0200000000" form={form} set={set} errors={errors} />
+            <SelectField label="Employment Status" k="status" options={["Full Time","Contract","Probation"]} form={form} set={set} />
+            <InputField label="Date of Employment" k="doj" placeholder="DD/MM/YYYY" form={form} set={set} errors={errors} />
+            <InputField label="Date of Birth"      k="dob" placeholder="DD/MM/YYYY" form={form} set={set} errors={errors} />
           </div>
         </section>
 
@@ -288,17 +286,17 @@ function EmployeeForm({ initial, onSave, onCancel, mode }) {
         <section>
           <p className="text-xs font-bold uppercase tracking-widest text-indigo-400 mb-3">Next of Kin</p>
           <div className="grid grid-cols-2 gap-3">
-            <InputField label="Full Name"          k="nokName"          placeholder="Jane Doe" />
-            <InputField label="Phone"              k="nokPhone"         placeholder="0200000000" />
-            <InputField label="Relationship"       k="relationship"     placeholder="Sister" />
-            <InputField label="Emergency Contact"  k="emergencyContact" placeholder="0200000000" />
+            <InputField label="Full Name"          k="nokName"          placeholder="Jane Doe" form={form} set={set} errors={errors} />
+            <InputField label="Phone"              k="nokPhone"         placeholder="0200000000" form={form} set={set} errors={errors} />
+            <InputField label="Relationship"       k="relationship"     placeholder="Sister" form={form} set={set} errors={errors} />
+            <InputField label="Emergency Contact"  k="emergencyContact" placeholder="0200000000" form={form} set={set} errors={errors} />
           </div>
         </section>
 
         {/* Additional */}
         <section>
           <p className="text-xs font-bold uppercase tracking-widest text-indigo-400 mb-3">Additional Details</p>
-          <InputField label="SSNIT Number" k="ssnit" placeholder="B000000000000" />
+          <InputField label="SSNIT Number" k="ssnit" placeholder="B000000000000" form={form} set={set} errors={errors} />
         </section>
       </div>
 
@@ -544,8 +542,14 @@ function Toast({ msg, type }) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  APP
 // ─────────────────────────────────────────────────────────────────────────────
+const STORAGE_KEY = "demargo_employees_v1";
+
 export default function App() {
-  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
+  const [employees, setEmployees] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : INITIAL_EMPLOYEES;
+  });
+
   const [search,       setSearch]       = useState("");
   const [deptFilter,   setDeptFilter]   = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -554,6 +558,11 @@ export default function App() {
   const [modal,        setModal]        = useState(null);
   const [confirm,      setConfirm]      = useState(null);
   const [toast,        setToast]        = useState(null);
+
+  // Persistence
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(employees));
+  }, [employees]);
 
   const showToast = (msg, type="success") => {
     setToast({ msg, type });
