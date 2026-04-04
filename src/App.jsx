@@ -1,4 +1,19 @@
 import { useState, useMemo, useEffect } from "react";
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, onValue, set, push, remove, update } from "firebase/database";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC09_b_uWspKRQPEyuaPk5JZwwDTH68zpw",
+  authDomain: "demargo-erms.firebaseapp.com",
+  projectId: "demargo-erms",
+  storageBucket: "demargo-erms.firebasestorage.app",
+  messagingSenderId: "132903868292",
+  appId: "1:132903868292:web:1be583adf9f428c97cefd1",
+  measurementId: "G-DW0Z986MPY"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  DATA
@@ -390,7 +405,7 @@ function EmployeeDetail({ emp, onClose, onEdit, onDelete }) {
       </div>
 
       <div className="flex gap-3 p-6 border-t border-white/10">
-        <button onClick={()=>onDelete(emp.id)}
+        <button onClick={()=>onDelete(emp)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/10 text-sm font-semibold transition-colors">
           <Ico.Trash /> Remove
         </button>
@@ -542,14 +557,9 @@ function Toast({ msg, type }) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  APP
 // ─────────────────────────────────────────────────────────────────────────────
-const STORAGE_KEY = "demargo_employees_v1";
-
 export default function App() {
-  const [employees, setEmployees] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : INITIAL_EMPLOYEES;
-  });
-
+  const [employees, setEmployees] = useState([]);
+  const [loading,   setLoading]   = useState(true);
   const [search,       setSearch]       = useState("");
   const [deptFilter,   setDeptFilter]   = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -559,10 +569,28 @@ export default function App() {
   const [confirm,      setConfirm]      = useState(null);
   const [toast,        setToast]        = useState(null);
 
-  // Persistence
+  // Firebase Listener
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(employees));
-  }, [employees]);
+    const empsRef = ref(db, 'employees');
+    const unsubscribe = onValue(empsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // Convert object to array
+        const list = Object.entries(data).map(([key, value]) => ({
+          ...value,
+          firebaseId: key
+        }));
+        setEmployees(list);
+      } else {
+        // If DB is empty, seed it with INITIAL_EMPLOYEES (only once)
+        INITIAL_EMPLOYEES.forEach(emp => {
+          push(ref(db, 'employees'), emp);
+        });
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const showToast = (msg, type="success") => {
     setToast({ msg, type });
@@ -586,24 +614,33 @@ export default function App() {
   }), [employees]);
 
   // Handlers
-  const handleSave = (form) => {
-    if (modal.type === "add") {
-      if (employees.find(e=>e.id===form.id)) { showToast("Employee ID already exists","error"); return; }
-      setEmployees(p=>[...p, form]);
-      showToast("Employee added successfully");
-    } else {
-      setEmployees(p=>p.map(e=>e.id===form.id?form:e));
-      showToast("Employee updated");
+  const handleSave = async (form) => {
+    try {
+      if (modal.type === "add") {
+        if (employees.find(e=>e.id===form.id)) { showToast("Employee ID already exists","error"); return; }
+        await push(ref(db, 'employees'), form);
+        showToast("Employee added successfully");
+      } else {
+        const { firebaseId, ...cleanForm } = form;
+        await update(ref(db, `employees/${firebaseId}`), cleanForm);
+        showToast("Employee updated");
+      }
+      setModal(null);
+    } catch (err) {
+      showToast("Operation failed", "error");
     }
-    setModal(null);
   };
 
-  const handleDelete = (id) => setConfirm({ id });
+  const handleDelete = (emp) => setConfirm({ id: emp.id, firebaseId: emp.firebaseId });
 
-  const confirmDelete = () => {
-    setEmployees(p=>p.filter(e=>e.id!==confirm.id));
-    setModal(null); setConfirm(null);
-    showToast("Employee removed");
+  const confirmDelete = async () => {
+    try {
+      await remove(ref(db, `employees/${confirm.firebaseId}`));
+      setModal(null); setConfirm(null);
+      showToast("Employee removed");
+    } catch (err) {
+      showToast("Delete failed", "error");
+    }
   };
 
   // ── RENDER ─────────────────────────────────────────────────────────────────
@@ -639,8 +676,14 @@ export default function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-
-        {/* TABS */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+             <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+             <p className="text-white/40 text-sm font-semibold tracking-widest uppercase">Syncing with Cloud...</p>
+          </div>
+        ) : (
+          <>
+            {/* TABS */}
         <div className="flex gap-1 p-1 rounded-xl w-fit border border-white/10 bg-white/5">
           {[{ id:"employees", label:"Employees", icon:<Ico.Users /> },{ id:"analytics", label:"Analytics", icon:<Ico.Chart /> }].map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)}
@@ -724,7 +767,7 @@ export default function App() {
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={e=>e.stopPropagation()}>
                             <button onClick={()=>setModal({ type:"edit", emp })}
                               className="p-1.5 rounded-lg hover:bg-white/12 text-white/45 hover:text-white transition-colors"><Ico.Edit /></button>
-                            <button onClick={()=>handleDelete(emp.id)}
+                            <button onClick={()=>handleDelete(emp)}
                               className="p-1.5 rounded-lg hover:bg-red-500/15 text-white/45 hover:text-red-400 transition-colors"><Ico.Trash /></button>
                           </div>
                         </div>
@@ -778,7 +821,7 @@ export default function App() {
                     <div className="col-span-1 flex gap-1" onClick={e=>e.stopPropagation()}>
                       <button onClick={()=>setModal({ type:"edit", emp })}
                         className="p-1.5 rounded-lg hover:bg-white/10 text-white/38 hover:text-white transition-colors"><Ico.Edit /></button>
-                      <button onClick={()=>handleDelete(emp.id)}
+                      <button onClick={()=>handleDelete(emp)}
                         className="p-1.5 rounded-lg hover:bg-red-500/15 text-white/38 hover:text-red-400 transition-colors"><Ico.Trash /></button>
                     </div>
                   </div>
@@ -809,3 +852,6 @@ export default function App() {
     </div>
   );
 }
+
+
+
