@@ -1,0 +1,40 @@
+export default function App() {
+  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
+  const [loading,   setLoading]   = useState(false);
+  const [search,       setSearch]       = useState("");
+  const [deptFilter,   setDeptFilter]   = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [viewMode,     setViewMode]     = useState("grid");
+  const [tab,          setTab]          = useState("employees");
+  const [modal,        setModal]        = useState(null);
+  const [confirm,      setConfirm]      = useState(null);
+  const [toast,        setToast]        = useState(null);
+
+  // Firebase Listener
+  useEffect(() => {
+    const empsRef = ref(db, 'employees');
+    const unsubscribe = onValue(empsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const list = Object.entries(data).map(([key, value]) => ({
+          ...value,
+          firebaseId: key
+        }));
+        setEmployees(list);
+      } else {
+        INITIAL_EMPLOYEES.forEach(emp => {
+          push(ref(db, 'employees'), emp);
+        });
+      }
+      setLoading(false);
+    }, (error) => {
+      console.error("Firebase error:", error);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const showToast = (msg, type="success") => {
+    setToast({ msg, type });
+    setTimeout(()=>setToast(null), 3200);
+  };

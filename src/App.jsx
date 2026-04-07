@@ -6,6 +6,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyC09_b_uWspKRQPEyuaPk5JZwwDTH68zpw",
   authDomain: "demargo-erms.firebaseapp.com",
   projectId: "demargo-erms",
+  databaseURL: "https://demargo-erms-default-rtdb.firebaseio.com/",
   storageBucket: "demargo-erms.firebasestorage.app",
   messagingSenderId: "132903868292",
   appId: "1:132903868292:web:1be583adf9f428c97cefd1",
@@ -558,8 +559,8 @@ function Toast({ msg, type }) {
 //  APP
 // ─────────────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [employees, setEmployees] = useState([]);
-  const [loading,   setLoading]   = useState(true);
+  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
+  const [loading,   setLoading]   = useState(false);
   const [search,       setSearch]       = useState("");
   const [deptFilter,   setDeptFilter]   = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -575,18 +576,19 @@ export default function App() {
     const unsubscribe = onValue(empsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        // Convert object to array
         const list = Object.entries(data).map(([key, value]) => ({
           ...value,
           firebaseId: key
         }));
         setEmployees(list);
       } else {
-        // If DB is empty, seed it with INITIAL_EMPLOYEES (only once)
         INITIAL_EMPLOYEES.forEach(emp => {
           push(ref(db, 'employees'), emp);
         });
       }
+      setLoading(false);
+    }, (error) => {
+      console.error("Firebase error:", error);
       setLoading(false);
     });
     return () => unsubscribe();
@@ -611,7 +613,7 @@ export default function App() {
     fullTime:  employees.filter(e=>e.status==="Full Time").length,
     contract:  employees.filter(e=>e.status==="Contract").length,
     probation: employees.filter(e=>e.status==="Probation").length,
-  }), [employees]);
+  }), [employees]); 
 
   // Handlers
   const handleSave = async (form) => {
@@ -684,149 +686,144 @@ export default function App() {
         ) : (
           <>
             {/* TABS */}
-        <div className="flex gap-1 p-1 rounded-xl w-fit border border-white/10 bg-white/5">
-          {[{ id:"employees", label:"Employees", icon:<Ico.Users /> },{ id:"analytics", label:"Analytics", icon:<Ico.Chart /> }].map(t=>(
-            <button key={t.id} onClick={()=>setTab(t.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab===t.id?"text-white shadow-lg":"text-white/45 hover:text-white"}`}
-              style={tab===t.id ? { background:"linear-gradient(135deg,#6366f1,#8b5cf6)" } : {}}>
-              {t.icon}{t.label}
-            </button>
-          ))}
-        </div>
-
-        {tab === "analytics" ? <Analytics employees={employees} /> : (
-          <>
-            {/* STAT CARDS */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard label="Total Employees" value={stats.total}     color="#6366f1" />
-              <StatCard label="Full Time"        value={stats.fullTime}  color="#10b981" />
-              <StatCard label="Contract"         value={stats.contract}  color="#f59e0b" />
-              <StatCard label="Probation"        value={stats.probation} color="#3b82f6" />
+            <div className="flex gap-1 p-1 rounded-xl w-fit border border-white/10 bg-white/5">
+              {[{ id:"employees", label:"Employees", icon:<Ico.Users /> },{ id:"analytics", label:"Analytics", icon:<Ico.Chart /> }].map(t=>(
+                <button key={t.id} onClick={()=>setTab(t.id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab===t.id?"text-white shadow-lg":"text-white/45 hover:text-white"}`}
+                  style={tab===t.id ? { background:"linear-gradient(135deg,#6366f1,#8b5cf6)" } : {}}>
+                  {t.icon}{t.label}
+                </button>
+              ))}
             </div>
 
-            {/* FILTER BAR */}
-            <div className="flex flex-wrap gap-3 items-center">
-              <div className="relative flex-1 min-w-[200px]">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35 pointer-events-none"><Ico.Search /></div>
-                <input value={search} onChange={e=>setSearch(e.target.value)}
-                  placeholder="Search by name, ID, role, department…"
-                  className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/28 outline-none focus:border-indigo-500 transition-colors" />
-              </div>
-              <select value={deptFilter} onChange={e=>setDeptFilter(e.target.value)}
-                className="rounded-xl border border-white/10 bg-[#0c0f1a] px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-colors">
-                {ALL_DEPTS.map(d=><option key={d}>{d}</option>)}
-              </select>
-              <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}
-                className="rounded-xl border border-white/10 bg-[#0c0f1a] px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-colors">
-                {ALL_STATUSES.map(s=><option key={s}>{s}</option>)}
-              </select>
-              {/* View toggle */}
-              <div className="flex gap-1 p-1 bg-white/5 rounded-xl border border-white/10">
-                {[{ m:"grid",icon:<Ico.Grid /> },{ m:"list",icon:<Ico.List /> }].map(v=>(
-                  <button key={v.m} onClick={()=>setViewMode(v.m)}
-                    className={`p-2 rounded-lg transition-all ${viewMode===v.m?"text-white":"text-white/38 hover:text-white"}`}
-                    style={viewMode===v.m ? { background:"linear-gradient(135deg,#6366f1,#8b5cf6)" } : {}}>
-                    {v.icon}
-                  </button>
-                ))}
-              </div>
-              <span className="text-xs text-white/30">{filtered.length} of {employees.length} employees</span>
-            </div>
+            {tab === "analytics" ? <Analytics employees={employees} /> : (
+              <>
+                {/* STAT CARDS */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <StatCard label="Total Employees" value={stats.total}     color="#6366f1" />
+                  <StatCard label="Full Time"        value={stats.fullTime}  color="#10b981" />
+                  <StatCard label="Contract"         value={stats.contract}  color="#f59e0b" />
+                  <StatCard label="Probation"        value={stats.probation} color="#3b82f6" />
+                </div>
 
-            {/* EMPTY STATE */}
-            {filtered.length === 0 && (
-              <div className="text-center py-20">
-                <p className="text-6xl mb-4">🔍</p>
-                <p className="text-lg font-bold text-white/60">No employees found</p>
-                <p className="text-sm text-white/30 mt-1">Try adjusting your search or filters</p>
-              </div>
-            )}
+                {/* FILTER BAR */}
+                <div className="flex flex-wrap gap-3 items-center">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35 pointer-events-none"><Ico.Search /></div>
+                    <input value={search} onChange={e=>setSearch(e.target.value)}
+                      placeholder="Search by name, ID, role, department�"
+                      className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/28 outline-none focus:border-indigo-500 transition-colors" />
+                  </div>
+                  <select value={deptFilter} onChange={e=>setDeptFilter(e.target.value)}
+                    className="rounded-xl border border-white/10 bg-[#0c0f1a] px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-colors">
+                    {ALL_DEPTS.map(d=><option key={d}>{d}</option>)}
+                  </select>
+                  <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}
+                    className="rounded-xl border border-white/10 bg-[#0c0f1a] px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-colors">
+                    {ALL_STATUSES.map(s=><option key={s}>{s}</option>)}
+                  </select>
+                  <div className="flex gap-1 p-1 bg-white/5 rounded-xl border border-white/10">
+                    {[{ m:"grid",icon:<Ico.Grid /> },{ m:"list",icon:<Ico.List /> }].map(v=>(
+                      <button key={v.m} onClick={()=>setViewMode(v.m)}
+                        className={`p-2 rounded-lg transition-all ${viewMode===v.m?"text-white":"text-white/38 hover:text-white"}`}
+                        style={viewMode===v.m ? { background:"linear-gradient(135deg,#6366f1,#8b5cf6)" } : {}}>
+                        {v.icon}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-xs text-white/30">{filtered.length} of {employees.length} employees</span>
+                </div>
 
-            {/* GRID VIEW */}
-            {filtered.length > 0 && viewMode === "grid" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filtered.map((emp, i)=>{
-                  const color = DEPT_COLORS[emp.dept] || "#6366f1";
-                  return (
-                    <div key={emp.id}
-                      className="card-anim group relative rounded-2xl border border-white/8 bg-white/4 hover:border-white/18 hover:bg-white/6 transition-all duration-200 cursor-pointer overflow-hidden"
-                      style={{ animationDelay:`${Math.min(i,15)*25}ms` }}
-                      onClick={()=>setModal({ type:"view", emp })}>
-                      {/* top accent bar */}
-                      <div className="absolute top-0 left-0 right-0 h-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background:color }} />
-                      <div className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <Avatar name={emp.name} dept={emp.dept} image={emp.image} />
-                            <div className="min-w-0">
-                              <p className="font-bold text-white text-sm leading-tight truncate">{emp.name}</p>
-                              <p className="text-xs text-white/48 mt-0.5 truncate">{emp.title}</p>
+                {filtered.length === 0 && (
+                  <div className="text-center py-20">
+                    <p className="text-6xl mb-4">??</p>
+                    <p className="text-lg font-bold text-white/60">No employees found</p>
+                    <p className="text-sm text-white/30 mt-1">Try adjusting your search or filters</p>
+                  </div>
+                )}
+
+                {filtered.length > 0 && viewMode === "grid" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filtered.map((emp, i)=>{
+                      const color = DEPT_COLORS[emp.dept] || "#6366f1";
+                      return (
+                        <div key={emp.id}
+                          className="card-anim group relative rounded-2xl border border-white/8 bg-white/4 hover:border-white/18 hover:bg-white/6 transition-all duration-200 cursor-pointer overflow-hidden"
+                          style={{ animationDelay:`${Math.min(i,15)*25}ms` }}
+                          onClick={()=>setModal({ type:"view", emp })}>
+                          <div className="absolute top-0 left-0 right-0 h-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background:color }} />
+                          <div className="p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <Avatar name={emp.name} dept={emp.dept} image={emp.image} />
+                                <div className="min-w-0">
+                                  <p className="font-bold text-white text-sm leading-tight truncate">{emp.name}</p>
+                                  <p className="text-xs text-white/48 mt-0.5 truncate">{emp.title}</p>
+                                </div>
+                              </div>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={e=>e.stopPropagation()}>
+                                <button onClick={()=>setModal({ type:"edit", emp })}
+                                  className="p-1.5 rounded-lg hover:bg-white/12 text-white/45 hover:text-white transition-colors"><Ico.Edit /></button>
+                                <button onClick={()=>handleDelete(emp)}
+                                  className="p-1.5 rounded-lg hover:bg-red-500/15 text-white/45 hover:text-red-400 transition-colors"><Ico.Trash /></button>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <StatusBadge status={emp.status} />
+                              <span className="text-xs text-white/30 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background:color }} />{emp.dept}
+                              </span>
+                            </div>
+                            <div className="mt-2.5 space-y-1">
+                              {emp.phone && <p className="flex items-center gap-1.5 text-xs text-white/30"><Ico.Phone />{emp.phone}</p>}
+                              {emp.doj   && <p className="flex items-center gap-1.5 text-xs text-white/30"><Ico.Calendar />Joined {emp.doj}</p>}
                             </div>
                           </div>
-                          {/* Action buttons — show on hover */}
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={e=>e.stopPropagation()}>
-                            <button onClick={()=>setModal({ type:"edit", emp })}
-                              className="p-1.5 rounded-lg hover:bg-white/12 text-white/45 hover:text-white transition-colors"><Ico.Edit /></button>
-                            <button onClick={()=>handleDelete(emp)}
-                              className="p-1.5 rounded-lg hover:bg-red-500/15 text-white/45 hover:text-red-400 transition-colors"><Ico.Trash /></button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {filtered.length > 0 && viewMode === "list" && (
+                  <div className="rounded-2xl border border-white/10 bg-white/4 overflow-hidden">
+                    <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-3 border-b border-white/8 text-xs font-bold uppercase tracking-widest text-white/30">
+                      <div className="col-span-1">ID</div>
+                      <div className="col-span-4">Employee</div>
+                      <div className="col-span-2">Department</div>
+                      <div className="col-span-2">Status</div>
+                      <div className="col-span-2">Phone</div>
+                      <div className="col-span-1">Actions</div>
+                    </div>
+                    {filtered.map(emp=>(
+                      <div key={emp.id}
+                        className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-white/5 hover:bg-white/4 transition-colors cursor-pointer items-center"
+                        onClick={()=>setModal({ type:"view", emp })}>
+                        <div className="col-span-1 text-xs font-mono text-white/35 truncate">{emp.id}</div>
+                        <div className="col-span-4 flex items-center gap-2 min-w-0">
+                          <Avatar name={emp.name} dept={emp.dept} size="sm" image={emp.image} />
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-white truncate">{emp.name}</p>
+                            <p className="text-xs text-white/40 truncate">{emp.title}</p>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <StatusBadge status={emp.status} />
-                          <span className="text-xs text-white/30 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background:color }} />{emp.dept}
-                          </span>
+                        <div className="col-span-2 hidden md:flex items-center gap-1.5 text-xs text-white/50">
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background:DEPT_COLORS[emp.dept]||"#6366f1" }} />
+                          <span className="truncate">{emp.dept}</span>
                         </div>
-                        <div className="mt-2.5 space-y-1">
-                          {emp.phone && <p className="flex items-center gap-1.5 text-xs text-white/30"><Ico.Phone />{emp.phone}</p>}
-                          {emp.doj   && <p className="flex items-center gap-1.5 text-xs text-white/30"><Ico.Calendar />Joined {emp.doj}</p>}
+                        <div className="col-span-2 hidden md:block"><StatusBadge status={emp.status} /></div>
+                        <div className="col-span-2 hidden md:block text-xs text-white/40 truncate">{emp.phone||"�"}</div>
+                        <div className="col-span-1 flex gap-1" onClick={e=>e.stopPropagation()}>
+                          <button onClick={()=>setModal({ type:"edit", emp })}
+                            className="p-1.5 rounded-lg hover:bg-white/10 text-white/38 hover:text-white transition-colors"><Ico.Edit /></button>
+                          <button onClick={()=>handleDelete(emp)}
+                            className="p-1.5 rounded-lg hover:bg-red-500/15 text-white/38 hover:text-red-400 transition-colors"><Ico.Trash /></button>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* LIST VIEW */}
-            {filtered.length > 0 && viewMode === "list" && (
-              <div className="rounded-2xl border border-white/10 bg-white/4 overflow-hidden">
-                {/* Header row */}
-                <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-3 border-b border-white/8 text-xs font-bold uppercase tracking-widest text-white/30">
-                  <div className="col-span-1">ID</div>
-                  <div className="col-span-4">Employee</div>
-                  <div className="col-span-2">Department</div>
-                  <div className="col-span-2">Status</div>
-                  <div className="col-span-2">Phone</div>
-                  <div className="col-span-1">Actions</div>
-                </div>
-                {filtered.map(emp=>(
-                  <div key={emp.id}
-                    className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-white/5 hover:bg-white/4 transition-colors cursor-pointer items-center"
-                    onClick={()=>setModal({ type:"view", emp })}>
-                    <div className="col-span-1 text-xs font-mono text-white/35 truncate">{emp.id}</div>
-                    <div className="col-span-4 flex items-center gap-2 min-w-0">
-                      <Avatar name={emp.name} dept={emp.dept} size="sm" image={emp.image} />
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">{emp.name}</p>
-                        <p className="text-xs text-white/40 truncate">{emp.title}</p>
-                      </div>
-                    </div>
-                    <div className="col-span-2 hidden md:flex items-center gap-1.5 text-xs text-white/50">
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background:DEPT_COLORS[emp.dept]||"#6366f1" }} />
-                      <span className="truncate">{emp.dept}</span>
-                    </div>
-                    <div className="col-span-2 hidden md:block"><StatusBadge status={emp.status} /></div>
-                    <div className="col-span-2 hidden md:block text-xs text-white/40 truncate">{emp.phone||"—"}</div>
-                    <div className="col-span-1 flex gap-1" onClick={e=>e.stopPropagation()}>
-                      <button onClick={()=>setModal({ type:"edit", emp })}
-                        className="p-1.5 rounded-lg hover:bg-white/10 text-white/38 hover:text-white transition-colors"><Ico.Edit /></button>
-                      <button onClick={()=>handleDelete(emp)}
-                        className="p-1.5 rounded-lg hover:bg-red-500/15 text-white/38 hover:text-red-400 transition-colors"><Ico.Trash /></button>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </>
         )}
@@ -852,6 +849,26 @@ export default function App() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
