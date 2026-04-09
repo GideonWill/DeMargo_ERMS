@@ -1,0 +1,89 @@
+ 
+EMPLOYEES_DATA_(_ADMINISTRATION)
+Sr
+No.
+Full
+Name
+Job Title Departm
+ent
+Phone
+number
+Employm
+ent
+status
+Date of
+Employm
+ent
+Date Of
+Birth
+Next of
+Kin
+Next of
+Kin
+phone
+num
+Next of
+kin
+Relations
+hip
+Emergen
+cy
+contact
+Ssnit
+Number
+Bank
+Account
+1 Christab
+el Marcel
+Quayson
+Procure
+ment
+officer
+Administ
+ration
+0241991
+903
+Full time 2nd
+February
+, 2024
+18th
+Decembe
+r,2004
+Michelle
+Marcel
+0249684
+448
+Sister 0249684
+448
+1400010
+882787
+2 Michael
+Nana
+kwame
+Danso
+Boateng
+Personal
+Assistant
+Administ
+ration
+0548970
+301
+Full time 30
+Septemb
+er, 2025
+2nd
+March,
+2002
+Prince
+kwaku
+Boateng
+0541900
+918
+Brother 0541900
+918
+1400010
+885568
+3
+4
+5
+
