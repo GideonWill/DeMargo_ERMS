@@ -97,14 +97,14 @@ async function updateFirebase() {
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const dataObj = {};
-    EMPLOYEES.forEach((emp, index) => {
-        dataObj[`emp_${index}`] = emp;
+    EMPLOYEES.forEach((emp) => {
+      dataObj[emp.id] = emp; // Key by employee ID so edits in the app are stable
     });
-    console.log('Updating Firebase with', EMPLOYEES.length, 'employees...');
+    console.log('Updating Firebase with', EMPLOYEES.length, 'employees (keyed by ID)...');
     await set(ref(db, 'employees'), dataObj);
-    console.log('✅ Firebase updated successfully!');
+    console.log('\u2705 Firebase updated successfully! Each employee stored at employees/<id>');
   } catch (err) {
-    console.error('❌ Error updating Firebase:', err);
+    console.error('\u274c Error updating Firebase:', err);
   }
   process.exit(0);
 }

@@ -586,21 +586,20 @@ export default function App() {
   const [confirm,      setConfirm]      = useState(null);
   const [toast,        setToast]        = useState(null);
 
-  // Firebase Listener
+  // Firebase Listener — employees stored by their own ID (e.g. employees/AM001)
   useEffect(() => {
     const empsRef = ref(db, 'employees');
     const unsubscribe = onValue(empsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const list = Object.entries(data).map(([key, value]) => ({
-          ...value,
-          firebaseId: key
-        }));
+        // Each key IS the employee ID; no separate firebaseId needed
+        const list = Object.values(data).filter(Boolean);
         setEmployees(list);
       } else {
-        INITIAL_EMPLOYEES.forEach(emp => {
-          push(ref(db, 'employees'), emp);
-        });
+        // Seed Firebase with initial data, keyed by employee ID
+        const seedObj = {};
+        INITIAL_EMPLOYEES.forEach(emp => { seedObj[emp.id] = emp; });
+        set(ref(db, 'employees'), seedObj);
       }
       setLoading(false);
     }, (error) => {
@@ -631,33 +630,37 @@ export default function App() {
     probation: employees.filter(e=>e.status==="Probation").length,
   }), [employees]); 
 
-  // Handlers
+  // Handlers — use employee's own ID as the stable Firebase key
   const handleSave = async (form) => {
     try {
-      if (modal.type === "add") {
-        if (employees.find(e=>e.id===form.id)) { showToast("Employee ID already exists","error"); return; }
-        await push(ref(db, 'employees'), form);
-        showToast("Employee added successfully");
-      } else {
-        const { firebaseId, ...cleanForm } = form;
-        await update(ref(db, `employees/${firebaseId}`), cleanForm);
-        showToast("Employee updated");
+      const { firebaseId, ...cleanForm } = form; // strip any stale firebaseId
+      if (!cleanForm.id || !cleanForm.id.trim()) {
+        showToast("Employee ID is required", "error"); return;
       }
+      if (modal.type === "add") {
+        if (employees.find(e => e.id === cleanForm.id)) {
+          showToast("Employee ID already exists", "error"); return;
+        }
+      }
+      // Always write to employees/<id> — covers both add and edit
+      await set(ref(db, `employees/${cleanForm.id}`), cleanForm);
+      showToast(modal.type === "add" ? "Employee added successfully" : "Employee updated");
       setModal(null);
     } catch (err) {
-      showToast("Operation failed", "error");
+      console.error("Save error:", err);
+      showToast("Operation failed — " + (err.message || ""), "error");
     }
   };
 
-  const handleDelete = (emp) => setConfirm({ id: emp.id, firebaseId: emp.firebaseId });
+  const handleDelete = (emp) => setConfirm({ id: emp.id });
 
   const confirmDelete = async () => {
     try {
-      await remove(ref(db, `employees/${confirm.firebaseId}`));
+      await remove(ref(db, `employees/${confirm.id}`));
       setModal(null); setConfirm(null);
       showToast("Employee removed");
     } catch (err) {
-      showToast("Delete failed", "error");
+      showToast("Delete failed — " + (err.message || ""), "error");
     }
   };
 
