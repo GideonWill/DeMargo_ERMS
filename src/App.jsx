@@ -112,7 +112,7 @@ const STATUS_STYLE = {
   "Probation":  { pill:"bg-sky-500/15    text-sky-400     border-sky-500/30",     dot:"bg-sky-400"     },
 };
 
-const EMPTY = { id:"", name:"", title:"", dept:"Administration", phone:"", status:"Full Time", doj:"", nokName:"", nokPhone:"", dob:"", emergencyContact:"", relationship:"", ssnit:"", bankAccount:"", image:"" };
+const EMPTY = { id:"", name:"", title:"", dept:"Administration", phone:"", status:"Full Time", doj:"", nokName:"", nokPhone:"", dob:"", emergencyContact:"", relationship:"", ssnit:"", bankAccount:"", ghanaCardId:"", image:"" };
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  UTILS
@@ -134,8 +134,8 @@ function calcAge(dob) {
 }
 
 function exportCSV(employees) {
-  const HEADERS = ["ID","Name","Title","Department","Phone","Status","Date of Employment","Date of Birth","NOK Name","NOK Phone","Relationship","Emergency Contact","SSNIT","Bank Account"];
-  const rows = employees.map(e => [e.id,e.name,e.title,e.dept,e.phone,e.status,e.doj,e.dob,e.nokName,e.nokPhone,e.relationship,e.emergencyContact,e.ssnit,e.bankAccount]);
+  const HEADERS = ["ID","Name","Title","Department","Phone","Status","Date of Employment","Date of Birth","NOK Name","NOK Phone","Relationship","Emergency Contact","SSNIT","Bank Account","Ghana Card ID"];
+  const rows = employees.map(e => [e.id,e.name,e.title,e.dept,e.phone,e.status,e.doj,e.dob,e.nokName,e.nokPhone,e.relationship,e.emergencyContact,e.ssnit,e.bankAccount,e.ghanaCardId]);
   const csv  = [HEADERS,...rows].map(r => r.map(c => `"${(c||"").replace(/"/g,'""')}"`).join(",")).join("\r\n");
   const url  = URL.createObjectURL(new Blob([csv], { type:"text/csv" }));
   const a    = Object.assign(document.createElement("a"), { href:url, download:"demargo_employees.csv" });
@@ -211,10 +211,21 @@ function StatCard({ label, value, color, sub }) {
 //  MODAL SHELL
 // ─────────────────────────────────────────────────────────────────────────────
 function Modal({ children, onClose }) {
+  // Close the modal when Escape key is pressed
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
       <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
-      <div className="relative z-10 w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl border border-white/15 bg-[#0c0f1a] shadow-2xl animate-scale-in" onClick={e=>e.stopPropagation()}>
+      <div className="relative z-10 w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl border border-white/15 bg-[#0c0f1a] shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
         {children}
       </div>
     </div>
@@ -321,6 +332,7 @@ function EmployeeForm({ initial, onSave, onCancel, mode }) {
           <div className="grid grid-cols-2 gap-3">
             <InputField label="SSNIT Number" k="ssnit" placeholder="B000000000000" form={form} set={set} errors={errors} />
             <InputField label="Bank Account" k="bankAccount" placeholder="0000000000000" form={form} set={set} errors={errors} />
+            <InputField label="Ghana Card ID" k="ghanaCardId" placeholder="GHA-XXXXXXXXXX-X" form={form} set={set} errors={errors} />
           </div>
         </section>
       </div>
@@ -406,6 +418,7 @@ function EmployeeDetail({ emp, onClose, onEdit, onDelete }) {
               <p className="text-sm font-mono font-semibold text-white">{emp.bankAccount}</p>
             </div>
           )}
+          
         </div>
 
         {/* Next of Kin */}
