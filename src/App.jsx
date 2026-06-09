@@ -404,7 +404,7 @@ function EmployeeDetail({ emp, onClose, onEdit, onDelete }) {
           ))}
         </div>
 
-        {/* SSNIT & Bank */}
+        {/* SSNIT, Bank & Ghana Card */}
         <div className="grid grid-cols-2 gap-3">
           {emp.ssnit && (
             <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/8 p-3">
@@ -418,7 +418,12 @@ function EmployeeDetail({ emp, onClose, onEdit, onDelete }) {
               <p className="text-sm font-mono font-semibold text-white">{emp.bankAccount}</p>
             </div>
           )}
-          
+          {emp.ghanaCardId && (
+            <div className="rounded-xl border border-amber-500/25 bg-amber-500/8 p-3">
+              <p className="text-xs text-amber-400 uppercase tracking-wider mb-1">Ghana Card ID</p>
+              <p className="text-sm font-mono font-semibold text-white">{emp.ghanaCardId}</p>
+            </div>
+          )}
         </div>
 
         {/* Next of Kin */}
