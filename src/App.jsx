@@ -419,7 +419,7 @@ function EmployeeDetail({ emp, onClose, onEdit, onDelete }) {
               <p className="text-sm font-mono font-semibold text-white">{emp.bankAccount}</p>
             </div>
           )}
-          /* Always display Ghana Card ID row (show placeholder if empty) */
+          
           <div className="rounded-xl border border-amber-500/25 bg-amber-500/8 p-3">
             <p className="text-xs text-amber-400 uppercase tracking-wider mb-1">Ghana Card ID</p>
             <p className="text-sm font-mono font-semibold text-white">{emp.ghanaCardId || "—"}</p>
