@@ -133,6 +133,67 @@ function calcAge(dob) {
   return age > 0 && age < 110 ? age : null;
 }
 
+function parseDOB(dob) {
+  if (!dob) return null;
+  const clean = dob.trim().toLowerCase();
+  
+  // Match DD/MM/YYYY or DD/MM
+  if (clean.includes('/')) {
+    const parts = clean.split('/');
+    if (parts.length >= 2) {
+      const d = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      const y = parts.length === 3 ? parseInt(parts[2], 10) : null;
+      if (!isNaN(d) && !isNaN(m) && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        return { day: d, monthIndex: m - 1, year: y };
+      }
+    }
+  }
+
+  const months = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+  const monthsAbbr = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+  
+  let foundMonthIndex = -1;
+  let foundMonthStr = "";
+  
+  for (let i = 0; i < months.length; i++) {
+    if (clean.includes(months[i])) {
+      foundMonthIndex = i;
+      foundMonthStr = months[i];
+      break;
+    }
+  }
+  if (foundMonthIndex === -1) {
+    for (let i = 0; i < monthsAbbr.length; i++) {
+      if (clean.includes(monthsAbbr[i])) {
+        foundMonthIndex = i;
+        foundMonthStr = monthsAbbr[i];
+        break;
+      }
+    }
+  }
+
+  if (foundMonthIndex !== -1) {
+    const withoutMonth = clean.replace(foundMonthStr, ' ');
+    const numMatches = withoutMonth.match(/\d+/g);
+    if (numMatches && numMatches.length > 0) {
+      const day = parseInt(numMatches[0], 10);
+      let year = null;
+      if (numMatches.length > 1) {
+        const potentialYear = parseInt(numMatches[1], 10);
+        if (potentialYear > 1900 && potentialYear < 2100) {
+          year = potentialYear;
+        }
+      }
+      if (day >= 1 && day <= 31) {
+        return { day, monthIndex: foundMonthIndex, year };
+      }
+    }
+  }
+
+  return null;
+}
+
 function exportCSV(employees) {
   const HEADERS = ["ID","Name","Title","Department","Phone","Status","Date of Employment","Date of Birth","NOK Name","NOK Phone","Relationship","Emergency Contact","SSNIT","Bank Account","Ghana Card ID"];
   const rows = employees.map(e => [e.id,e.name,e.title,e.dept,e.phone,e.status,e.doj,e.dob,e.nokName,e.nokPhone,e.relationship,e.emergencyContact,e.ssnit,e.bankAccount,e.ghanaCardId]);
@@ -162,6 +223,7 @@ const Ico = {
   Alert:    ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   Check:    ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>,
   ID:       ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8L2 7"/><circle cx="9" cy="14" r="2"/><path d="M13 14h4M13 18h4M9 18v-2"/></svg>,
+  Gift:     ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5" rx="1"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -357,6 +419,7 @@ function EmployeeForm({ initial, onSave, onCancel, mode }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function EmployeeDetail({ emp, onClose, onEdit, onDelete }) {
   console.log('EmployeeDetail emp:', emp);
+  const [fullscreenImage, setFullscreenImage] = useState(false);
   const age   = calcAge(emp.dob);
   const color = DEPT_COLORS[emp.dept] || "#6366f1";
 
@@ -374,7 +437,12 @@ function EmployeeDetail({ emp, onClose, onEdit, onDelete }) {
         <div className="absolute inset-0" style={{ background:`radial-gradient(ellipse at 0% 50%,${color}15 0%,transparent 65%)` }} />
         <div className="relative flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Avatar name={emp.name} dept={emp.dept} size="lg" image={emp.image} />
+            <div 
+              className={emp.image ? "cursor-pointer hover:scale-105 transition-transform" : ""} 
+              onClick={() => emp.image && setFullscreenImage(true)}
+            >
+              <Avatar name={emp.name} dept={emp.dept} size="lg" image={emp.image} />
+            </div>
             <div>
               <h2 className="text-2xl font-black text-white leading-tight" style={{ fontFamily:"'Playfair Display',serif" }}>{emp.name}</h2>
               <p className="text-white/55 mt-0.5 text-sm">{emp.title}</p>
@@ -391,11 +459,11 @@ function EmployeeDetail({ emp, onClose, onEdit, onDelete }) {
 
       <div className="p-6 space-y-5">
         {/* Core details */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[
             { label:"Phone",          value:emp.phone,    icon:<Ico.Phone /> },
             { label:"Date Joined",    value:emp.doj,      icon:<Ico.Calendar /> },
-            { label:"Date of Birth",  value:emp.dob ? `${emp.dob}${age ? ` (${age} yrs)`:""}`:"", icon:<Ico.Calendar /> },
+            { label:"Date of Birth",  value:emp.dob ? emp.dob : "", icon:<Ico.Calendar /> },
             { label:"Employment",     value:emp.status },
           ].map(({ label, value, icon })=>(
             <div key={label} className="rounded-xl border border-white/8 bg-white/4 p-3">
@@ -406,7 +474,7 @@ function EmployeeDetail({ emp, onClose, onEdit, onDelete }) {
         </div>
 
         {/* SSNIT, Bank & Ghana Card */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {emp.ssnit && (
             <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/8 p-3">
               <p className="text-xs text-indigo-400 uppercase tracking-wider mb-1">SSNIT Number</p>
@@ -452,6 +520,23 @@ function EmployeeDetail({ emp, onClose, onEdit, onDelete }) {
           <Ico.Edit /> Edit Employee
         </button>
       </div>
+      
+      {fullscreenImage && emp.image && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={() => setFullscreenImage(false)}
+        >
+          <div className="relative max-w-3xl max-h-[90vh] flex flex-col items-center justify-center">
+            <img src={emp.image} alt={emp.name} className="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl ring-1 ring-white/10" />
+            <button 
+              className="absolute -top-4 -right-4 p-2 bg-black/80 hover:bg-black rounded-full text-white/70 hover:text-white transition-colors ring-1 ring-white/20"
+              onClick={(e) => { e.stopPropagation(); setFullscreenImage(false); }}
+            >
+              <Ico.Close />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -549,6 +634,125 @@ function Analytics({ employees }) {
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  BIRTHDAYS
+// ─────────────────────────────────────────────────────────────────────────────
+function Birthdays({ employees, onEmployeeClick }) {
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const today = new Date();
+  const currentMonth = today.getMonth();
+  const currentDay = today.getDate();
+
+  const empsWithDOB = employees.map(e => {
+    const dobObj = parseDOB(e.dob);
+    return { ...e, dobObj };
+  }).filter(e => e.dobObj);
+
+  // Group by month
+  const byMonth = Array.from({ length: 12 }, () => []);
+  empsWithDOB.forEach(emp => {
+    byMonth[emp.dobObj.monthIndex].push(emp);
+  });
+  
+  // Sort each month chronologically
+  byMonth.forEach(monthArr => monthArr.sort((a, b) => a.dobObj.day - b.dobObj.day));
+
+  const currentMonthBirthdays = byMonth[currentMonth];
+
+  return (
+    <div className="space-y-10">
+      
+      {/* Celebration Banner */}
+      <div>
+        <h2 className="text-3xl font-black text-white mb-6" style={{ fontFamily:"'Playfair Display',serif" }}>This Month's Birthdays 🎂</h2>
+        {currentMonthBirthdays.length === 0 ? (
+          <div className="p-8 rounded-2xl border border-white/10 bg-white/5 text-center text-white/50">
+            No birthdays this month.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {currentMonthBirthdays.map(emp => {
+              const isToday = emp.dobObj.day === currentDay;
+              const isPassed = emp.dobObj.day < currentDay;
+              const color = DEPT_COLORS[emp.dept] || "#6366f1";
+              
+              return (
+                <div key={emp.id} onClick={() => onEmployeeClick(emp)} className={`relative overflow-hidden rounded-2xl border p-5 transition-all cursor-pointer hover:scale-[1.02] hover:border-white/20
+                  ${isToday ? "border-indigo-500/50 bg-indigo-500/10 shadow-[0_0_30px_rgba(99,102,241,0.2)]" : "border-white/10 bg-white/5"}
+                  ${isPassed ? "opacity-60" : "opacity-100"}`}>
+                  
+                  {isToday && (
+                    <div className="absolute top-0 right-0 px-3 py-1 bg-indigo-500 text-white text-[10px] font-bold uppercase rounded-bl-xl tracking-wider animate-pulse">
+                      Today!
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-4 mb-4">
+                    <Avatar name={emp.name} dept={emp.dept} size="lg" image={emp.image} />
+                    <div className="min-w-0">
+                      <p className="font-bold text-lg text-white truncate">{emp.name}</p>
+                      <p className="text-xs text-white/50 truncate">{emp.title}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                         <span className="w-2 h-2 rounded-full" style={{ background:color }} />
+                         <span className="text-xs text-white/40">{emp.dept}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between border-t border-white/10 pt-4 mt-4">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-0.5">Date</p>
+                      <p className="text-lg font-black text-white">{months[currentMonth].substring(0,3)} {emp.dobObj.day}</p>
+                    </div>
+                  </div>
+
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Annual Grid */}
+      <div>
+        <h2 className="text-3xl font-black text-white mb-6" style={{ fontFamily:"'Playfair Display',serif" }}>Annual Calendar</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {months.map((m, i) => (
+            <div key={m} className={`rounded-2xl border ${i === currentMonth ? "border-indigo-500/30 bg-indigo-500/5" : "border-white/10 bg-white/4"} p-4 flex flex-col h-64`}>
+              <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/10">
+                <h3 className="font-black text-white/80">{m}</h3>
+                <span className="text-xs font-bold bg-white/10 px-2 py-0.5 rounded-full text-white/50">{byMonth[i].length}</span>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto pr-1 space-y-3 scrollbar-hide">
+                {byMonth[i].length === 0 ? (
+                  <p className="text-xs text-white/30 text-center mt-4">No birthdays</p>
+                ) : (
+                  byMonth[i].map(emp => (
+                    <div key={emp.id} onClick={() => onEmployeeClick(emp)} className="flex items-center justify-between gap-3 group cursor-pointer hover:bg-white/5 p-1 rounded-lg transition-colors -mx-1">
+                       <div className="flex items-center gap-2 min-w-0">
+                         <div className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold text-white shrink-0" 
+                              style={{ background:DEPT_COLORS[emp.dept]||"#6366f1" }}>
+                           {emp.dobObj.day}
+                         </div>
+                         <div className="min-w-0">
+                           <p className="text-sm font-semibold text-white/90 truncate group-hover:text-white transition-colors">{emp.name}</p>
+                           <p className="text-[10px] text-white/40 truncate">{emp.title}</p>
+                         </div>
+                       </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
     </div>
   );
 }
@@ -725,17 +929,17 @@ export default function App() {
         ) : (
           <>
             {/* TABS */}
-            <div className="flex gap-1 p-1 rounded-xl w-fit border border-white/10 bg-white/5">
-              {[{ id:"employees", label:"Employees", icon:<Ico.Users /> },{ id:"analytics", label:"Analytics", icon:<Ico.Chart /> }].map(t=>(
+            <div className="flex gap-1 p-1 rounded-xl w-full overflow-x-auto sm:w-fit border border-white/10 bg-white/5 scrollbar-hide">
+              {[{ id:"employees", label:"Employees", icon:<Ico.Users /> },{ id:"analytics", label:"Analytics", icon:<Ico.Chart /> },{ id:"birthdays", label:"Birthdays", icon:<Ico.Gift /> }].map(t=>(
                 <button key={t.id} onClick={()=>setTab(t.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab===t.id?"text-white shadow-lg":"text-white/45 hover:text-white"}`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${tab===t.id?"text-white shadow-lg":"text-white/45 hover:text-white"}`}
                   style={tab===t.id ? { background:"linear-gradient(135deg,#6366f1,#8b5cf6)" } : {}}>
                   {t.icon}{t.label}
                 </button>
               ))}
             </div>
 
-            {tab === "analytics" ? <Analytics employees={employees} /> : (
+            {tab === "analytics" ? <Analytics employees={employees} /> : tab === "birthdays" ? <Birthdays employees={employees} onEmployeeClick={emp => setModal({ type:"view", emp })} /> : (
               <>
                 {/* STAT CARDS */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
