@@ -610,28 +610,47 @@ function EmployeeDetail({ emp, onClose, onEdit, onDelete }) {
                 </div>
               </div>
               {emp.strikeLetter ? (
-                <button 
-                  onClick={() => {
-                    try {
-                      const win = window.open();
-                      if (win) {
-                        win.document.write(`<iframe src="${emp.strikeLetter}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
-                        win.document.title = emp.strikeLetterName || "Strike Letter";
-                      } else {
-                        alert("Please allow popups to view the strike letter");
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button 
+                    onClick={() => {
+                      try {
+                        // Convert base64 data URL to Blob then open as blob:// URL
+                        const [header, b64] = emp.strikeLetter.split(",");
+                        const mime = (header.match(/:(.*?);/) || [])[1] || "application/pdf";
+                        const binary = atob(b64);
+                        const bytes = new Uint8Array(binary.length);
+                        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                        const blob = new Blob([bytes], { type: mime });
+                        const blobUrl = URL.createObjectURL(blob);
+                        const tab = window.open(blobUrl, "_blank");
+                        if (!tab) alert("Please allow popups to view the strike letter.");
+                        // Revoke after short delay so the new tab has time to load
+                        setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+                      } catch (e) {
+                        console.error(e);
+                        // Fallback: trigger a download
+                        const link = document.createElement("a");
+                        link.href = emp.strikeLetter;
+                        link.download = emp.strikeLetterName || "strike_letter.pdf";
+                        link.click();
                       }
-                    } catch (e) {
-                      console.error(e);
+                    }}
+                    className="rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 px-3.5 py-2 text-xs font-semibold text-red-300 transition-colors whitespace-nowrap"
+                  >
+                    View Strike Letter
+                  </button>
+                  <button
+                    onClick={() => {
                       const link = document.createElement("a");
                       link.href = emp.strikeLetter;
                       link.download = emp.strikeLetterName || "strike_letter.pdf";
                       link.click();
-                    }
-                  }}
-                  className="rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 px-3.5 py-2 text-xs font-semibold text-red-300 transition-colors whitespace-nowrap"
-                >
-                  View Strike Letter
-                </button>
+                    }}
+                    className="rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 px-3.5 py-2 text-xs font-semibold text-white/50 hover:text-white transition-colors whitespace-nowrap"
+                  >
+                    Download
+                  </button>
+                </div>
               ) : (
                 <span className="text-xs text-white/30 italic">No document uploaded</span>
               )}
