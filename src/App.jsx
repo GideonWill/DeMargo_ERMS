@@ -112,7 +112,7 @@ const STATUS_STYLE = {
   "Probation":  { pill:"bg-sky-500/15    text-sky-400     border-sky-500/30",     dot:"bg-sky-400"     },
 };
 
-const EMPTY = { id:"", name:"", title:"", dept:"Administration", phone:"", status:"Full Time", doj:"", nokName:"", nokPhone:"", dob:"", emergencyContact:"", relationship:"", ssnit:"", bankAccount:"", ghanaCardId:"", image:"" };
+const EMPTY = { id:"", name:"", title:"", dept:"Administration", phone:"", status:"Full Time", doj:"", nokName:"", nokPhone:"", dob:"", emergencyContact:"", relationship:"", ssnit:"", bankAccount:"", ghanaCardId:"", image:"", hasStrike: false, strikeLetter: "", strikeLetterName: "" };
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  UTILS
@@ -224,6 +224,7 @@ const Ico = {
   Check:    ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>,
   ID:       ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8L2 7"/><circle cx="9" cy="14" r="2"/><path d="M13 14h4M13 18h4M9 18v-2"/></svg>,
   Gift:     ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5" rx="1"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>,
+  File:     ({className="w-4 h-4"}) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -314,7 +315,7 @@ const SelectField = ({ label, k, form, set, options }) => (
   </div>
 );
 
-function EmployeeForm({ initial, onSave, onCancel, mode }) {
+function EmployeeForm({ initial, onSave, onCancel, mode, showToast }) {
   const [form, setForm] = useState({ ...initial });
   const [errors, setErrors] = useState({});
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -397,6 +398,82 @@ function EmployeeForm({ initial, onSave, onCancel, mode }) {
             <InputField label="Ghana Card ID" k="ghanaCardId" placeholder="GHA-XXXXXXXXXX-X" form={form} set={set} errors={errors} />
           </div>
         </section>
+
+        {/* Disciplinary / Strike Action */}
+        <section className="border-t border-white/10 pt-6">
+          <p className="text-xs font-bold uppercase tracking-widest text-red-400 mb-3">Disciplinary & Strike Action</p>
+          <div className="space-y-4 rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+            <div className="flex items-center gap-3">
+              <input 
+                type="checkbox" 
+                id="hasStrike" 
+                checked={!!form.hasStrike} 
+                onChange={e => {
+                  const checked = e.target.checked;
+                  setForm(f => {
+                    const next = { ...f, hasStrike: checked };
+                    if (!checked) {
+                      next.strikeLetter = "";
+                      next.strikeLetterName = "";
+                    }
+                    return next;
+                  });
+                }}
+                className="w-4 h-4 rounded border-white/10 bg-white/5 text-red-500 focus:ring-red-500 focus:ring-opacity-25"
+              />
+              <label htmlFor="hasStrike" className="text-sm font-semibold text-white cursor-pointer select-none">
+                Apply Disciplinary Strike Action
+              </label>
+            </div>
+            
+            {form.hasStrike && (
+              <div className="space-y-3 pl-7 animate-fade-in">
+                <p className="text-xs text-white/40">Upload a strike letter PDF. Storing is handled as a file attachment on the employee record.</p>
+                <div className="flex items-center gap-3">
+                  <label className="cursor-pointer rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300 font-semibold hover:bg-red-500/20 transition-colors flex items-center gap-2">
+                    <Ico.Download className="rotate-180" /> Upload Strike Letter (PDF)
+                    <input 
+                      type="file" 
+                      accept="application/pdf" 
+                      className="hidden" 
+                      onChange={e => {
+                        if (e.target.files && e.target.files[0]) {
+                          const file = e.target.files[0];
+                          if (file.type !== "application/pdf") {
+                            if (showToast) showToast("Only PDF files are allowed", "error");
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            setForm(f => ({
+                              ...f,
+                              strikeLetter: ev.target.result,
+                              strikeLetterName: file.name
+                            }));
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                  {form.strikeLetter && (
+                    <div className="flex items-center gap-2 text-sm text-white/70 bg-white/5 px-3 py-2 rounded-xl border border-white/10 max-w-xs truncate">
+                      <Ico.File />
+                      <span className="truncate" title={form.strikeLetterName}>{form.strikeLetterName || "strike_letter.pdf"}</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setForm(f => ({ ...f, strikeLetter: "", strikeLetterName: "" }))} 
+                        className="text-red-400 hover:text-red-300 ml-2 font-bold"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
       </div>
 
       <div className="flex gap-3 p-6 border-t border-white/10">
@@ -432,6 +509,14 @@ function EmployeeDetail({ emp, onClose, onEdit, onDelete }) {
 
   return (
     <div>
+      {emp.hasStrike && (
+        <div className="bg-red-500/15 border-b border-red-500/20 px-6 py-3 flex items-center gap-3 text-red-400 font-semibold text-sm">
+          <span className="animate-pulse flex h-2 w-2 rounded-full bg-red-500 shrink-0" />
+          <span className="tracking-wide uppercase font-bold flex items-center gap-1.5">
+            <Ico.Alert /> Active Disciplinary Strike
+          </span>
+        </div>
+      )}
       {/* Hero */}
       <div className="relative p-6 border-b border-white/10 overflow-hidden">
         <div className="absolute inset-0" style={{ background:`radial-gradient(ellipse at 0% 50%,${color}15 0%,transparent 65%)` }} />
@@ -507,6 +592,52 @@ function EmployeeDetail({ emp, onClose, onEdit, onDelete }) {
             )}
           </div>
         </div>
+
+        {/* Strike Details */}
+        {emp.hasStrike && (
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-red-400 mb-3">Strike Documents</p>
+            <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400 shrink-0">
+                  <Ico.File className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white truncate" title={emp.strikeLetterName || "strike_letter.pdf"}>
+                    {emp.strikeLetterName || "strike_letter.pdf"}
+                  </p>
+                  <p className="text-xs text-white/40">Disciplinary letter attachment</p>
+                </div>
+              </div>
+              {emp.strikeLetter ? (
+                <button 
+                  onClick={() => {
+                    try {
+                      const win = window.open();
+                      if (win) {
+                        win.document.write(`<iframe src="${emp.strikeLetter}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                        win.document.title = emp.strikeLetterName || "Strike Letter";
+                      } else {
+                        alert("Please allow popups to view the strike letter");
+                      }
+                    } catch (e) {
+                      console.error(e);
+                      const link = document.createElement("a");
+                      link.href = emp.strikeLetter;
+                      link.download = emp.strikeLetterName || "strike_letter.pdf";
+                      link.click();
+                    }
+                  }}
+                  className="rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 px-3.5 py-2 text-xs font-semibold text-red-300 transition-colors whitespace-nowrap"
+                >
+                  View Strike Letter
+                </button>
+              ) : (
+                <span className="text-xs text-white/30 italic">No document uploaded</span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-3 p-6 border-t border-white/10">
@@ -804,6 +935,7 @@ export default function App() {
   const [search,       setSearch]       = useState("");
   const [deptFilter,   setDeptFilter]   = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [strikeFilter, setStrikeFilter] = useState("All");
   const [viewMode,     setViewMode]     = useState("grid");
   const [tab,          setTab]          = useState("employees");
   const [modal,        setModal]        = useState(null);
@@ -843,9 +975,10 @@ export default function App() {
     return (
       (!q || e.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q) || e.title.toLowerCase().includes(q) || e.dept.toLowerCase().includes(q) || e.phone.includes(q)) &&
       (deptFilter   === "All" || e.dept   === deptFilter) &&
-      (statusFilter === "All" || e.status === statusFilter)
+      (statusFilter === "All" || e.status === statusFilter) &&
+      (strikeFilter === "All" || (strikeFilter === "Yes" && e.hasStrike) || (strikeFilter === "No" && !e.hasStrike))
     );
-  }), [employees, search, deptFilter, statusFilter]);
+  }), [employees, search, deptFilter, statusFilter, strikeFilter]);
 
   const stats = useMemo(()=>({
     total:     employees.length,
@@ -965,6 +1098,12 @@ export default function App() {
                     className="rounded-xl border border-white/10 bg-[#0c0f1a] px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-colors">
                     {ALL_STATUSES.map(s=><option key={s}>{s}</option>)}
                   </select>
+                  <select value={strikeFilter} onChange={e=>setStrikeFilter(e.target.value)}
+                    className="rounded-xl border border-white/10 bg-[#0c0f1a] px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-colors">
+                    <option value="All">All Strike Statuses</option>
+                    <option value="Yes">Under Strike</option>
+                    <option value="No">No Strike</option>
+                  </select>
                   <div className="flex gap-1 p-1 bg-white/5 rounded-xl border border-white/10">
                     {[{ m:"grid",icon:<Ico.Grid /> },{ m:"list",icon:<Ico.List /> }].map(v=>(
                       <button key={v.m} onClick={()=>setViewMode(v.m)}
@@ -991,10 +1130,10 @@ export default function App() {
                       const color = DEPT_COLORS[emp.dept] || "#6366f1";
                       return (
                         <div key={emp.id}
-                          className="card-anim group relative rounded-2xl border border-white/8 bg-white/4 hover:border-white/18 hover:bg-white/6 transition-all duration-200 cursor-pointer overflow-hidden"
+                          className={`card-anim group relative rounded-2xl border bg-white/4 hover:bg-white/6 transition-all duration-200 cursor-pointer overflow-hidden ${emp.hasStrike ? "border-red-500/40 hover:border-red-500/60 shadow-[0_0_15px_rgba(239,68,68,0.1)]" : "border-white/8 hover:border-white/18"}`}
                           style={{ animationDelay:`${Math.min(i,15)*25}ms` }}
                           onClick={()=>setModal({ type:"view", emp })}>
-                          <div className="absolute top-0 left-0 right-0 h-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background:color }} />
+                          <div className={`absolute top-0 left-0 right-0 h-0.5 transition-opacity duration-300 ${emp.hasStrike ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`} style={{ background: emp.hasStrike ? "#ef4444" : color }} />
                           <div className="p-4">
                             <div className="flex items-start justify-between mb-3">
                               <div className="flex items-center gap-3">
@@ -1012,7 +1151,14 @@ export default function App() {
                               </div>
                             </div>
                             <div className="flex items-center justify-between gap-2 flex-wrap">
-                              <StatusBadge status={emp.status} />
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <StatusBadge status={emp.status} />
+                                {emp.hasStrike && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-red-500/30 bg-red-500/10 text-red-400">
+                                    ⚠️ Strike
+                                  </span>
+                                )}
+                              </div>
                               <span className="text-xs text-white/30 flex items-center gap-1">
                                 <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background:color }} />{emp.dept}
                               </span>
@@ -1046,7 +1192,14 @@ export default function App() {
                         <div className="col-span-4 flex items-center gap-2 min-w-0">
                           <Avatar name={emp.name} dept={emp.dept} size="sm" image={emp.image} />
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-white truncate">{emp.name}</p>
+                            <p className="text-sm font-semibold text-white truncate flex items-center gap-1.5">
+                              {emp.name}
+                              {emp.hasStrike && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black tracking-wider uppercase border border-red-500/30 bg-red-500/10 text-red-400">
+                                  Strike
+                                </span>
+                              )}
+                            </p>
                             <p className="text-xs text-white/40 truncate">{emp.title}</p>
                           </div>
                         </div>
@@ -1081,7 +1234,7 @@ export default function App() {
       )}
       {(modal?.type === "add" || modal?.type === "edit") && (
         <Modal onClose={()=>setModal(null)}>
-          <EmployeeForm initial={modal.emp} onSave={handleSave} onCancel={()=>setModal(null)} mode={modal.type} />
+          <EmployeeForm initial={modal.emp} onSave={handleSave} onCancel={()=>setModal(null)} mode={modal.type} showToast={showToast} />
         </Modal>
       )}
       {confirm && (
