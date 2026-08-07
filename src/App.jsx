@@ -117,6 +117,32 @@ const EMPTY = { id:"", name:"", title:"", dept:"Administration", phone:"", statu
 // ─────────────────────────────────────────────────────────────────────────────
 //  UTILS
 // ─────────────────────────────────────────────────────────────────────────────
+function generateNextId(employees = []) {
+  const prefix = "DM";
+
+  let maxNum = 0;
+  (employees || []).forEach(emp => {
+    if (!emp || !emp.id) return;
+    const match = emp.id.match(/\d+/);
+    if (match) {
+      const num = parseInt(match[0], 10);
+      if (!isNaN(num) && num > maxNum) {
+        maxNum = num;
+      }
+    }
+  });
+
+  let candidateNum = maxNum + 1;
+  let candidateId = `${prefix}${String(candidateNum).padStart(4, "0")}`;
+
+  while ((employees || []).some(e => e && e.id === candidateId)) {
+    candidateNum++;
+    candidateId = `${prefix}${String(candidateNum).padStart(4, "0")}`;
+  }
+
+  return candidateId;
+}
+
 function getInitials(name) {
   return name.split(" ").slice(0, 2).map(n => n[0] ?? "").join("").toUpperCase();
 }
@@ -296,11 +322,11 @@ function Modal({ children, onClose }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-const InputField = ({ label, k, form, set, errors, placeholder="" }) => (
+const InputField = ({ label, k, form, set, errors, placeholder="", disabled=false, readOnly=false }) => (
   <div>
     <label className="block text-xs font-semibold uppercase tracking-widest text-white/45 mb-1.5">{label}</label>
-    <input value={form[k] || ""} onChange={e=>set(k,e.target.value)} placeholder={placeholder}
-      className={`w-full rounded-xl border bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:bg-white/8 focus:border-indigo-500 ${errors[k]?"border-red-500":"border-white/10"}`} />
+    <input value={form[k] || ""} onChange={e=>set(k,e.target.value)} placeholder={placeholder} disabled={disabled} readOnly={readOnly}
+      className={`w-full rounded-xl border bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:bg-white/8 focus:border-indigo-500 ${disabled || readOnly ? "opacity-60 cursor-not-allowed bg-white/3 select-none" : ""} ${errors[k]?"border-red-500":"border-white/10"}`} />
     {errors[k] && <p className="text-red-400 text-xs mt-1">{errors[k]}</p>}
   </div>
 );
@@ -315,10 +341,19 @@ const SelectField = ({ label, k, form, set, options }) => (
   </div>
 );
 
-function EmployeeForm({ initial, onSave, onCancel, mode, showToast }) {
+function EmployeeForm({ initial, onSave, onCancel, mode, showToast, employees = [] }) {
   const [form, setForm] = useState({ ...initial });
   const [errors, setErrors] = useState({});
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleDeptChange = (k, v) => {
+    if (k === "dept" && mode === "add") {
+      const nextId = generateNextId(employees, v);
+      setForm(f => ({ ...f, dept: v, id: nextId }));
+    } else {
+      set(k, v);
+    }
+  };
 
   function validate() {
     const e = {};
@@ -367,10 +402,10 @@ function EmployeeForm({ initial, onSave, onCancel, mode, showToast }) {
         <section>
           <p className="text-xs font-bold uppercase tracking-widest text-indigo-400 mb-3">Basic Information</p>
           <div className="grid grid-cols-2 gap-3">
-            <InputField label="Employee ID" k="id" placeholder="DM001" form={form} set={set} errors={errors} />
+            <InputField label="Employee ID" k="id" placeholder="DM0001" form={form} set={set} errors={errors} readOnly={true} />
             <InputField label="Full Name"   k="name" placeholder="John Doe" form={form} set={set} errors={errors} />
             <InputField label="Job Title"   k="title" placeholder="Senior Designer" form={form} set={set} errors={errors} />
-            <SelectField label="Department" k="dept" options={ALL_DEPTS.filter(d=>d!=="All")} form={form} set={set} />
+            <SelectField label="Department" k="dept" options={ALL_DEPTS.filter(d=>d!=="All")} form={form} set={handleDeptChange} />
             <InputField label="Phone Number" k="phone" placeholder="0200000000" form={form} set={set} errors={errors} />
             <SelectField label="Employment Status" k="status" options={["Full Time","Contract","Probation"]} form={form} set={set} />
             <InputField label="Date of Employment" k="doj" placeholder="DD/MM/YYYY" form={form} set={set} errors={errors} />
@@ -1017,6 +1052,15 @@ export default function App() {
         if (employees.find(e => e.id === cleanForm.id)) {
           showToast("Employee ID already exists", "error"); return;
         }
+      } else if (modal.type === "edit") {
+        const oldId = modal.emp?.id;
+        if (oldId && oldId !== cleanForm.id) {
+          if (employees.find(e => e.id === cleanForm.id)) {
+            showToast("Employee ID already exists", "error"); return;
+          }
+          // Delete old ID key from Firebase so orphan records never remain
+          await remove(ref(db, `employees/${oldId}`));
+        }
       }
       // Always write to employees/<id> — covers both add and edit
       await set(ref(db, `employees/${cleanForm.id}`), cleanForm);
@@ -1062,7 +1106,7 @@ export default function App() {
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/10 text-white/55 hover:text-white hover:border-white/20 text-xs font-semibold transition-colors">
                 <Ico.Download /> <span className="hidden sm:inline">Export CSV</span>
               </button>
-              <button onClick={()=>setModal({ type:"add", emp:{ ...EMPTY } })}
+              <button onClick={()=>setModal({ type:"add", emp:{ ...EMPTY, id: generateNextId(employees, "Administration") } })}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90 active:scale-95"
                 style={{ background:"linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
                 <Ico.Plus /> <span>Add Employee</span>
@@ -1253,7 +1297,7 @@ export default function App() {
       )}
       {(modal?.type === "add" || modal?.type === "edit") && (
         <Modal onClose={()=>setModal(null)}>
-          <EmployeeForm initial={modal.emp} onSave={handleSave} onCancel={()=>setModal(null)} mode={modal.type} showToast={showToast} />
+          <EmployeeForm initial={modal.emp} onSave={handleSave} onCancel={()=>setModal(null)} mode={modal.type} showToast={showToast} employees={employees} />
         </Modal>
       )}
       {confirm && (
