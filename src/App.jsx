@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, set, push, remove, update } from "firebase/database";
 
@@ -394,30 +394,352 @@ function exportCSV(employees) {
 //  ICONS
 // ─────────────────────────────────────────────────────────────────────────────
 const Ico = {
-  Search:   ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
-  Plus:     ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M12 5v14M5 12h14"/></svg>,
-  Edit:     ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-  Trash:    ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>,
-  Eye:      ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
-  Close:    ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M18 6L6 18M6 6l12 12"/></svg>,
-  Users:    ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-  Chart:    ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>,
-  Download: ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
-  Phone:    ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
-  Calendar: ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-  Grid:     ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
-  List:     ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
-  Alert:    ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
-  Check:    ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>,
-  CheckCircle: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
-  Clock:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-  Hourglass: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>,
-  Umbrella: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M22 12a10.06 10.06 0 0 0-20 0Z"/><path d="M12 12v8a2 2 0 0 0 4 0"/><path d="M12 2v1"/></svg>,
-  Lock:     () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
-  ID:       ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8L2 7"/><circle cx="9" cy="14" r="2"/><path d="M13 14h4M13 18h4M9 18v-2"/></svg>,
-  Gift:     ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5" rx="1"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>,
-  File:     ({className="w-4 h-4"}) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
+  Search: ({ className = "w-4 h-4" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+  ),
+  Plus: ({ className = "w-4 h-4" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 5v14M5 12h14"/>
+    </svg>
+  ),
+  Edit: ({ className = "w-4 h-4" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+    </svg>
+  ),
+  Trash: ({ className = "w-4 h-4" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+    </svg>
+  ),
+  Eye: ({ className = "w-4 h-4" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+    </svg>
+  ),
+  Close: ({ className = "w-5 h-5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M18 6L6 18M6 6l12 12"/>
+    </svg>
+  ),
+  Users: ({ className = "w-5 h-5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  Chart: ({ className = "w-5 h-5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
+    </svg>
+  ),
+  Download: ({ className = "w-4 h-4" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+  ),
+  Phone: ({ className = "w-3.5 h-3.5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+    </svg>
+  ),
+  Calendar: ({ className = "w-3.5 h-3.5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+  ),
+  Grid: ({ className = "w-4 h-4" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+    </svg>
+  ),
+  List: ({ className = "w-4 h-4" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+    </svg>
+  ),
+  Alert: ({ className = "w-5 h-5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+  ),
+  AlertTriangle: ({ className = "w-4 h-4" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+  ),
+  Check: ({ className = "w-4 h-4" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  ),
+  CheckCircle: ({ className = "w-3.5 h-3.5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+    </svg>
+  ),
+  ShieldCheck: ({ className = "w-3.5 h-3.5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>
+    </svg>
+  ),
+  CheckBadge: ({ className = "w-3.5 h-3.5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/>
+    </svg>
+  ),
+  Clock: ({ className = "w-3.5 h-3.5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </svg>
+  ),
+  Hourglass: ({ className = "w-3.5 h-3.5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>
+    </svg>
+  ),
+  Palmtree: ({ className = "w-3.5 h-3.5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h11z"/><path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-9"/><path d="M5.8 21a14.7 14.7 0 0 1 6.2-13"/><path d="M13 14c-.62 2.68-.45 5.5.8 8"/>
+    </svg>
+  ),
+  Sun: ({ className = "w-3.5 h-3.5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+    </svg>
+  ),
+  Lock: ({ className = "w-3.5 h-3.5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+  ),
+  Sparkles: ({ className = "w-3.5 h-3.5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3z"/>
+    </svg>
+  ),
+  ChevronDown: ({ className = "w-4 h-4" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="6 9 12 15 18 9"/>
+    </svg>
+  ),
+  ChevronUp: ({ className = "w-4 h-4" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="18 15 12 9 6 15"/>
+    </svg>
+  ),
+  ID: ({ className = "w-3.5 h-3.5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8L2 7"/><circle cx="9" cy="14" r="2"/><path d="M13 14h4M13 18h4M9 18v-2"/>
+    </svg>
+  ),
+  Gift: ({ className = "w-5 h-5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5" rx="1"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+    </svg>
+  ),
+  File: ({ className = "w-4 h-4" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+    </svg>
+  ),
+  Layers: ({ className = "w-4 h-4" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+    </svg>
+  ),
 };
+
+const TENURE_OPTIONS = [
+  {
+    id: "All",
+    label: "All Service & Leave Statuses",
+    shortLabel: "All Milestones",
+    description: "Viewing all employees across all tenure and service duration stages",
+    icon: Ico.Sparkles,
+    color: "#818cf8",
+  },
+  {
+    id: "LeaveEligible",
+    label: "Leave Eligible (≥ 1 Year)",
+    shortLabel: "Leave Eligible",
+    description: "Completed 12+ months service • Qualified for annual paid leave allowance",
+    icon: Ico.Palmtree,
+    color: "#2dd4bf",
+  },
+  {
+    id: "LeaveIneligible",
+    label: "Not Leave Eligible (< 1 Year)",
+    shortLabel: "Not Leave Eligible",
+    description: "Under 12 months service • Currently accumulating tenure toward leave eligibility",
+    icon: Ico.Lock,
+    color: "#f59e0b",
+  },
+  {
+    id: "ProbationDone",
+    label: "Completed Probation (≥ 6 Mos)",
+    shortLabel: "Probation Completed",
+    description: "Reached 6+ months milestone • Successfully passed initial probation period",
+    icon: Ico.ShieldCheck,
+    color: "#34d399",
+  },
+  {
+    id: "InProbation",
+    label: "Active Probation (< 6 Mos)",
+    shortLabel: "Active Probation",
+    description: "Currently serving their initial 6-month probationary timeline",
+    icon: Ico.Hourglass,
+    color: "#38bdf8",
+  },
+  {
+    id: "ProbationReviewNeeded",
+    label: "Probation Ended (Review for Full-Time)",
+    shortLabel: "Probation Review Needed",
+    description: "Status is 'Probation' but tenure is ≥ 6 months • HR action needed to promote to Full-Time",
+    icon: Ico.AlertTriangle,
+    color: "#fb7185",
+    badge: "Action Required"
+  }
+];
+
+function TenureDropdown({ value, onChange, counts = {} }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  const currentOption = TENURE_OPTIONS.find(o => o.id === value) || TENURE_OPTIONS[0];
+  const IconComponent = currentOption.icon;
+
+  return (
+    <div className="relative min-w-[240px]" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between gap-2.5 rounded-xl border border-white/10 bg-[#0c0f1a] px-3.5 py-2.5 text-sm text-white transition-all hover:border-white/20 focus:border-indigo-500 focus:outline-none group shadow-sm"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <span
+            className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 border"
+            style={{
+              background: `${currentOption.color}20`,
+              borderColor: `${currentOption.color}40`,
+              color: currentOption.color
+            }}
+          >
+            <IconComponent className="w-3.5 h-3.5" />
+          </span>
+          <span className="truncate font-medium text-xs sm:text-sm">
+            {currentOption.label}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {counts[currentOption.id] !== undefined && (
+            <span
+              className="px-1.5 py-0.5 rounded-md text-[10px] font-bold border"
+              style={{
+                background: `${currentOption.color}15`,
+                borderColor: `${currentOption.color}30`,
+                color: currentOption.color
+              }}
+            >
+              {counts[currentOption.id]}
+            </span>
+          )}
+          <Ico.ChevronDown className={`w-3.5 h-3.5 text-white/40 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+        </div>
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 sm:right-auto sm:w-[380px] top-full mt-2 z-50 rounded-2xl border border-white/15 bg-[#0c1020]/95 backdrop-blur-2xl p-2 shadow-2xl animate-scale-in">
+          <div className="px-2.5 py-1.5 mb-1 border-b border-white/10 flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-white/40">Filter by Milestone</span>
+            <span className="text-[11px] text-white/40">Select Section</span>
+          </div>
+          <div className="space-y-1 max-h-[380px] overflow-y-auto pr-0.5 scrollbar-thin">
+            {TENURE_OPTIONS.map((opt) => {
+              const OptIcon = opt.icon;
+              const isSelected = opt.id === value;
+              const count = counts[opt.id] ?? 0;
+
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.id);
+                    setOpen(false);
+                  }}
+                  className={`w-full flex items-start justify-between gap-3 p-2.5 rounded-xl text-left transition-all group ${
+                    isSelected
+                      ? "bg-white/10 border border-white/15 shadow-inner"
+                      : "hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <span
+                      className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border mt-0.5 transition-transform group-hover:scale-110"
+                      style={{
+                        background: `${opt.color}20`,
+                        borderColor: `${opt.color}40`,
+                        color: opt.color
+                      }}
+                    >
+                      <OptIcon className="w-4 h-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-xs sm:text-sm font-semibold truncate ${isSelected ? "text-white" : "text-white/80 group-hover:text-white"}`}>
+                          {opt.label}
+                        </span>
+                        {opt.badge && (
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                            {opt.badge}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-white/40 mt-0.5 line-clamp-1 leading-snug">
+                        {opt.description}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                    <span
+                      className="px-2 py-0.5 rounded-full text-[10px] font-bold border"
+                      style={{
+                        background: `${opt.color}15`,
+                        borderColor: `${opt.color}30`,
+                        color: opt.color
+                      }}
+                    >
+                      {count}
+                    </span>
+                    {isSelected && (
+                      <span className="text-emerald-400">
+                        <Ico.Check className="w-3.5 h-3.5" />
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  ATOMS
@@ -454,13 +776,13 @@ function LeaveEligibilityBadge({ tenure }) {
   if (tenure.isLeaveEligible) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-teal-500/15 text-teal-300 border border-teal-500/30" title="Completed 1+ year. Eligible for annual leave.">
-        <Ico.Umbrella /> Leave Ready (1y+)
+        <Ico.Palmtree className="w-3.5 h-3.5 text-teal-300" /> Leave Ready (1y+)
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-white/5 text-white/45 border border-white/10" title={`Requires 1 year of service. ${tenure.leaveMonthsLeft} month(s) remaining.`}>
-      <Ico.Lock /> Leave in {tenure.leaveMonthsLeft}m
+      <Ico.Lock className="w-3 h-3 text-white/40" /> Leave in {tenure.leaveMonthsLeft}m
     </span>
   );
 }
@@ -472,7 +794,7 @@ function ProbationStatusBadge({ tenure, status }) {
     if (tenure.isProbationDone) {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 animate-pulse" title="Completed 6+ months probation. Ready for Full Time review!">
-          <Ico.CheckCircle /> Prob. Done ({tenure.totalMonths}m)
+          <Ico.AlertTriangle className="w-3.5 h-3.5 text-rose-400" /> Prob. Completed ({tenure.totalMonths}m)
         </span>
       );
     }
@@ -487,7 +809,7 @@ function ProbationStatusBadge({ tenure, status }) {
   if (tenure.isProbationDone) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-500/10 text-emerald-400/80 border border-emerald-500/20" title="Completed 6+ months of service">
-        <Ico.CheckCircle /> 6m+ Confirmed
+        <Ico.ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> 6m+ Confirmed
       </span>
     );
   } else {
@@ -1228,7 +1550,7 @@ function Birthdays({ employees, onEmployeeClick }) {
       
       {/* Celebration Banner */}
       <div>
-        <h2 className="text-3xl font-black text-white mb-6" style={{ fontFamily:"'Playfair Display',serif" }}>This Month's Birthdays 🎂</h2>
+        <h2 className="text-3xl font-black text-white mb-6" style={{ fontFamily:"'Playfair Display',serif" }}>This Month's Birthdays</h2>
         {currentMonthBirthdays.length === 0 ? (
           <div className="p-8 rounded-2xl border border-white/10 bg-white/5 text-center text-white/50">
             No birthdays this month.
@@ -1418,30 +1740,49 @@ export default function App() {
     return matchesSearch && matchesDept && matchesStatus && matchesStrike && matchesTenure;
   }), [employees, search, deptFilter, statusFilter, strikeFilter, tenureFilter]);
 
-  const stats = useMemo(() => {
-    let leaveEligibleCount = 0;
-    let probationPassedCount = 0;
-    let activeProbationCount = 0;
+  const milestoneCounts = useMemo(() => {
+    const counts = {
+      All: employees.length,
+      LeaveEligible: 0,
+      LeaveIneligible: 0,
+      ProbationDone: 0,
+      InProbation: 0,
+      ProbationReviewNeeded: 0,
+    };
 
     employees.forEach(e => {
       const t = calcTenure(e.doj);
-      if (t) {
-        if (t.isLeaveEligible) leaveEligibleCount++;
-        if (t.isProbationDone) probationPassedCount++;
-        else activeProbationCount++;
+      if (t?.isLeaveEligible) counts.LeaveEligible++;
+      else counts.LeaveIneligible++;
+
+      if (t?.isProbationDone) counts.ProbationDone++;
+
+      if (e.status === "Probation") {
+        if (t?.isProbationDone) {
+          counts.ProbationReviewNeeded++;
+        } else {
+          counts.InProbation++;
+        }
+      } else if (t && !t.isProbationDone && e.status !== "Full Time") {
+        counts.InProbation++;
       }
     });
 
+    return counts;
+  }, [employees]);
+
+  const stats = useMemo(() => {
     return {
       total:           employees.length,
       fullTime:        employees.filter(e=>e.status==="Full Time").length,
       contract:        employees.filter(e=>e.status==="Contract").length,
       probation:       employees.filter(e=>e.status==="Probation").length,
-      leaveEligible:   leaveEligibleCount,
-      probationPassed: probationPassedCount,
-      activeProbation: activeProbationCount,
+      leaveEligible:   milestoneCounts.LeaveEligible,
+      probationPassed: milestoneCounts.ProbationDone,
+      activeProbation: milestoneCounts.InProbation,
+      reviewNeeded:    milestoneCounts.ProbationReviewNeeded,
     };
-  }, [employees]); 
+  }, [employees, milestoneCounts]); 
 
   // Handlers — use employee's own ID as the stable Firebase key
   const handleSave = async (form) => {
@@ -1563,15 +1904,7 @@ export default function App() {
                     className="rounded-xl border border-white/10 bg-[#0c0f1a] px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-colors">
                     {ALL_STATUSES.map(s=><option key={s}>{s}</option>)}
                   </select>
-                  <select value={tenureFilter} onChange={e=>setTenureFilter(e.target.value)}
-                    className="rounded-xl border border-white/10 bg-[#0c0f1a] px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-colors">
-                    <option value="All">All Service & Leave Statuses</option>
-                    <option value="LeaveEligible">🌴 Leave Eligible (≥ 1 Year)</option>
-                    <option value="LeaveIneligible">🔒 Not Leave Eligible (&lt; 1 Year)</option>
-                    <option value="ProbationDone">✅ Completed Probation (≥ 6 Mos)</option>
-                    <option value="InProbation">⏳ Active Probation (&lt; 6 Mos)</option>
-                    <option value="ProbationReviewNeeded">⚠️ Probation Ended (Review for Full-Time)</option>
-                  </select>
+<TenureDropdown value={tenureFilter} onChange={setTenureFilter} counts={milestoneCounts} />
                   <select value={strikeFilter} onChange={e=>setStrikeFilter(e.target.value)}
                     className="rounded-xl border border-white/10 bg-[#0c0f1a] px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-colors">
                     <option value="All">All Strike Statuses</option>
@@ -1589,10 +1922,64 @@ export default function App() {
                   </div>
                   <span className="text-xs text-white/30">{filtered.length} of {employees.length} employees</span>
                 </div>
+                {/* SECTION BANNER FOR ACTIVE MILESTONE / SERVICE STATUS */}
+                {(() => {
+                  const currentSection = TENURE_OPTIONS.find(o => o.id === tenureFilter);
+                  if (!currentSection || tenureFilter === "All") return null;
+                  const SectionIcon = currentSection.icon;
+                  return (
+                    <div className="relative overflow-hidden rounded-2xl border p-4 sm:p-5 transition-all shadow-xl animate-fade-in"
+                      style={{
+                        borderColor: `${currentSection.color}40`,
+                        background: `linear-gradient(135deg, ${currentSection.color}15 0%, rgba(12,16,32,0.95) 100%)`
+                      }}>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-start sm:items-center gap-3.5">
+                          <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-lg border"
+                            style={{
+                              background: `${currentSection.color}20`,
+                              borderColor: `${currentSection.color}40`,
+                              color: currentSection.color
+                            }}>
+                            <SectionIcon className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                                {currentSection.label}
+                              </h3>
+                              {currentSection.badge && (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30 animate-pulse">
+                                  {currentSection.badge}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs sm:text-sm text-white/65 mt-0.5 max-w-2xl leading-relaxed">
+                              {currentSection.description}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                          <span className="px-3 py-1.5 rounded-xl text-xs font-bold text-white shadow-inner border border-white/10"
+                            style={{ background: `${currentSection.color}25` }}>
+                            {filtered.length} Employee{filtered.length === 1 ? "" : "s"} in this Section
+                          </span>
+                          <button onClick={() => setTenureFilter("All")}
+                            className="p-1.5 px-2.5 rounded-xl border border-white/10 hover:bg-white/10 text-white/50 hover:text-white transition-colors text-xs font-medium flex items-center gap-1.5"
+                            title="Show All Employees">
+                            <Ico.Close className="w-3.5 h-3.5" />
+                            <span>Show All</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
 
                 {filtered.length === 0 && (
                   <div className="text-center py-20">
-                    <p className="text-6xl mb-4">👥</p>
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/30"><Ico.Users className="w-8 h-8" /></div>
                     <p className="text-lg font-bold text-white/60">No employees found</p>
                     <p className="text-sm text-white/30 mt-1">Try adjusting your search or filters</p>
                   </div>
@@ -1632,7 +2019,7 @@ export default function App() {
                                 <StatusBadge status={emp.status} />
                                 {emp.hasStrike && (
                                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-red-500/30 bg-red-500/10 text-red-400">
-                                    ⚠️ Strike
+                                    <Ico.AlertTriangle className="w-3 h-3 text-red-400 inline mr-1" /> Strike
                                   </span>
                                 )}
                               </div>
