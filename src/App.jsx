@@ -499,6 +499,11 @@ const Ico = {
       <path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>
     </svg>
   ),
+  Umbrella: ({ className = "w-3.5 h-3.5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M22 12a10.06 10.06 0 0 0-20 0Z"/><path d="M12 12v8a2 2 0 0 0 4 0"/><path d="M12 2v1"/>
+    </svg>
+  ),
   Palmtree: ({ className = "w-3.5 h-3.5" }) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h11z"/><path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-9"/><path d="M5.8 21a14.7 14.7 0 0 1 6.2-13"/><path d="M13 14c-.62 2.68-.45 5.5.8 8"/>
@@ -1206,7 +1211,7 @@ function EmployeeDetail({ emp, onClose, onEdit, onDelete }) {
               <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-white/80 flex items-center gap-1.5">
-                    <Ico.Umbrella /> 1-Year Leave Policy
+                    <Ico.Palmtree className="w-4 h-4 text-teal-300" /> 1-Year Leave Policy
                   </span>
                   {tenure.isLeaveEligible ? (
                     <span className="text-teal-300 font-bold flex items-center gap-1">
@@ -1415,7 +1420,7 @@ function Analytics({ employees }) {
         <div className="rounded-2xl border border-teal-500/20 bg-teal-500/5 p-5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-bold uppercase tracking-widest text-teal-400 flex items-center gap-2">
-              <Ico.Umbrella /> Annual Leave Eligibility (1+ Year)
+              <Ico.Palmtree className="w-4 h-4 text-teal-300" /> Annual Leave Eligibility (1+ Year)
             </p>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 font-bold">
               {Math.round((tenureStats.leaveEligible / (employees.length || 1)) * 100)}% Eligible
