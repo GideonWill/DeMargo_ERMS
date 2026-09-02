@@ -1,0 +1,411 @@
+Employees_Data
+#
+Full N ame
+Job Title 
+Department 
+Phone number 
+Employment
+status
+Date of
+Employment 
+Date Of Birth 
+N ext of Kin
+N ext of  Kin
+phone num
+N ext of kin
+Relationship 
+Emergency
+contact 
+Ssnit N umber 
+Bank Account
+1
+Tuah  Vida
+Production
+Manager 
+Production 
+0577753329
+Full time 
+19th June ,2026
+1st May,1994
+Juliana Tuah
+0549805635
+Sister 
+0244308677
+B03940501002
+8
+140000785433
+3
+2
+Otu Charles 
+Tailoring Head
+Production 
+0531427829
+Full time
+2nd April ,2024
+23rd February
+,2003
+Otu Ebenezer 
+0544421839
+Brother 
+0544421839
+140000880774
+6
+3
+Asiedu Larbi
+Cynthia 
+Deputy
+production
+manager 
+Production
+0244821287
+Full time
+3rd September
+,2024
+19th November
+,1977
+Wilfreda N.S
+Wilson 
+0531638118
+Daughter 
+0244481212/05
+44897348
+140000953560
+7
+4
+Ocloo Princess
+Charity
+Deputy tailoring
+head
+Production
+0535324956
+Full time
+9th September
+,2024
+24th
+March,1999
+Ocloo Pascaline
+Etornam
+0531383382
+Sister 
+0535386255
+140000953800
+5
+5
+Sarpong Esther 
+Tailor 
+Production
+0596221194
+Full time
+6th April ,2025
+1st January
+,2005
+Kojo Asante
+0531335521
+Brother 
+0532640085
+F23050101002
+2
+140000676152
+8
+6
+Osae Mary  Afful
+Tailor
+Production
+0535303732
+Full time
+1st September
+,2025
+6th November
+,2000
+Issabel Osei
+Banahene
+0545013171
+Sister 
+0248219483
+7
+Opokua Mavis 
+Tailor
+Production
+0256870984
+Full time
+10th September
+,2024
+5th January
+,2002
+Solomon Opoku
+0535497824
+Brother 
+0594474041
+E07020105006
+1
+140000953759
+9
+8
+Boakye Joel
+Atuahene
+Tailor
+Production
+0551362771
+Full time
+20th August,
+2025
+28th June ,2003
+Boakye Hagar
+0542375312
+Sister 
+0593369296
+140001086271
+1
+9
+Iddrisu Abass
+Tailor
+Production
+0553907260
+Full time
+8th May, 2025
+9th May, 2002
+Iddrisu Abu
+0554092253
+Brother 
+0554092253
+140000965535
+4
+10
+Donkoh Thomas 
+Tailor
+Production
+0591627374
+Full time
+8th May, 2025
+17th November
+,2005
+Ofori Evelyn 
+0243579250
+Sister 
+0243579250
+140000998398
+7
+11
+Bondzie Kwesi
+Theophilus
+Tailor
+Production
+0533822154
+Full time
+20th August,
+2025
+20th August,
+1989
+Bondzie Ishmael 
+0547771413
+Brother
+0547771413
+A16890820009
+9
+140001086377
+7
+12
+Quayson
+Samuel 
+Tailor
+Production
+0544360599
+Probation 
+8th March ,2026
+4th September
+,2004
+Quayson Betty
+0540896656
+Sister 
+0540896656
+140001088259
+3
+13
+Godson Adiglah
+Tailor
+Production
+0592288875
+Full time
+4th October
+2025
+24th April ,2004
+Adiglah Melody
+0545974996
+Sister
+0545974996
+140001088269
+8
+14
+Danyo
+Emmanuel 
+Tailor
+Production
+0599537826
+Probation
+28th February
+,2026
+20th November
+,2006
+Danyo
+Francisca
+0554513182
+Sister
+0554513182
+15
+Asare Emelia
+Pokua
+Pulling 
+Production
+0594124180
+Full time
+29th May,2024
+15th June ,2001
+Peprah
+Augustus 
+0558489335
+Son
+0247052875
+140000953771
+8
+16
+Dzotepe Yayra
+Pulling
+Production
+0531610054
+Full time
+27th April ,2025
+4th May,2002
+Dzotepe
+Maxwell 
+0249966574
+Brother 
+0547029768
+140000957907
+8
+17
+Konadu Eunice 
+Pulling
+Production
+0532790104
+Full time
+20th August
+,2025
+2nd April ,2005
+Asante Michael 
+0544107388
+Brother 
+0546422503
+140001086843
+4
+18
+Awunor Beatrice 
+Pulling
+Production
+0535681563
+Full time
+9th January
+,2026
+16th November
+,2004
+Awunor Eliana
+0595465312
+Daughter 
+0595465312
+19
+Nartey Victoria
+Pulling
+Production
+0256403633
+Probation 
+2nd February
+,2026
+27th November
+,2005
+Nartey Bridget
+0542497738
+Sister 
+0547613388
+140001087081
+1
+20
+Mensah Lydia
+Vashti
+Pulling
+Production
+0591516222
+Probation
+13th March
+,2026
+5th October
+,2005
+Mandela
+Agyemang
+Mensah
+0591516222
+Son
+0596210108
+140001087218
+8
+21
+Abayi Yayra
+Bernice 
+Pulling
+Production
+0537964573
+Probation
+13th March
+,2026
+19th August
+,2006
+Abayi William 
+0244431809
+Father 
+0244431809
+22
+Helena Kissi
+Kumiwaa
+Pulling /
+Cleaning 
+Production/
+AMB
+0591528605
+Full time
+14th February
+,2025
+13th July,2002
+Amperdu
+Dominic 
+0599537826
+Brother 
+0543233713
+140000962305
+3
+23
+Precious Ama
+Gyamfua
+Pulling /
+Cleaning
+Production/
+AMB
+0257809705
+Full time
+15th October
+,2025
+8th July ,2007
+Isaac N. B
+Acheampong
+0207794819
+Brother 
+0257620860
+24
+Amonquandor
+Priscilla 
+Pulling /
+Cleaning
+Production/
+AMB
+0554476347
+Full time
+140000965958
+9
+∑

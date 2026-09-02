@@ -147,6 +147,145 @@ function getInitials(name) {
   return name.split(" ").slice(0, 2).map(n => n[0] ?? "").join("").toUpperCase();
 }
 
+function parseDateString(str) {
+  if (!str) return null;
+  const clean = str.trim().toLowerCase();
+  if (!clean) return null;
+
+  // Handle DD/MM/YYYY or MM/YYYY or DD-MM-YYYY
+  if (clean.includes('/') || clean.includes('-')) {
+    const delimiter = clean.includes('/') ? '/' : '-';
+    const parts = clean.split(delimiter);
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        // YYYY/MM/DD
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const d = parseInt(parts[2], 10);
+        if (!isNaN(y) && !isNaN(m) && !isNaN(d)) return new Date(y, m, d);
+      } else {
+        // DD/MM/YYYY
+        const d = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const y = parseInt(parts[2], 10);
+        if (!isNaN(y) && !isNaN(m) && !isNaN(d)) return new Date(y, m, d);
+      }
+    } else if (parts.length === 2) {
+      // MM/YYYY
+      const m = parseInt(parts[0], 10) - 1;
+      const y = parseInt(parts[1], 10);
+      if (!isNaN(y) && !isNaN(m)) return new Date(y, m, 1);
+    }
+  }
+
+  // Handle textual dates (e.g., "15 October 2024", "5th May 2025", "7th January, 2026")
+  const months = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+  const monthsAbbr = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+  
+  let foundMonthIndex = -1;
+  let foundMonthStr = "";
+  for (let i = 0; i < months.length; i++) {
+    if (clean.includes(months[i])) { foundMonthIndex = i; foundMonthStr = months[i]; break; }
+  }
+  if (foundMonthIndex === -1) {
+    for (let i = 0; i < monthsAbbr.length; i++) {
+      if (clean.includes(monthsAbbr[i])) { foundMonthIndex = i; foundMonthStr = monthsAbbr[i]; break; }
+    }
+  }
+
+  if (foundMonthIndex !== -1) {
+    const normalized = clean.replace(/(\d+)(st|nd|rd|th)/gi, "$1");
+    const withoutMonth = normalized.replace(foundMonthStr, " ");
+    const numMatches = withoutMonth.match(/\d+/g);
+    if (numMatches && numMatches.length >= 1) {
+      let day = 1;
+      let year = null;
+      if (numMatches.length === 1) {
+        const val = parseInt(numMatches[0], 10);
+        if (val > 1900 && val < 2100) year = val;
+        else day = val;
+      } else {
+        day = parseInt(numMatches[0], 10);
+        year = parseInt(numMatches[1], 10);
+      }
+      if (year) return new Date(year, foundMonthIndex, day);
+    }
+  }
+
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) return parsed;
+  return null;
+}
+
+function calcTenure(doj) {
+  if (!doj) return null;
+  const startDate = parseDateString(doj);
+  if (!startDate || isNaN(startDate.getTime())) return null;
+
+  const now = new Date();
+  if (startDate > now) {
+    return {
+      years: 0,
+      months: 0,
+      totalMonths: 0,
+      formatted: "New / Upcoming",
+      isProbationDone: false,
+      isLeaveEligible: false,
+      probationMonthsLeft: 6,
+      leaveMonthsLeft: 12,
+      probationProgress: 0,
+      leaveProgress: 0,
+      startDate
+    };
+  }
+
+  let years = now.getFullYear() - startDate.getFullYear();
+  let months = now.getMonth() - startDate.getMonth();
+  let days = now.getDate() - startDate.getDate();
+
+  if (days < 0) {
+    months--;
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  const totalMonths = Math.max(0, years * 12 + months);
+  
+  let formatted = "";
+  if (years > 0 && months > 0) {
+    formatted = `${years} yr${years > 1 ? "s" : ""}, ${months} mo${months > 1 ? "s" : ""}`;
+  } else if (years > 0) {
+    formatted = `${years} yr${years > 1 ? "s" : ""}`;
+  } else if (months > 0) {
+    formatted = `${months} mo${months > 1 ? "s" : ""}`;
+  } else {
+    formatted = "< 1 mo";
+  }
+
+  const isProbationDone = totalMonths >= 6;
+  const isLeaveEligible = totalMonths >= 12;
+  const probationMonthsLeft = Math.max(0, 6 - totalMonths);
+  const leaveMonthsLeft = Math.max(0, 12 - totalMonths);
+  const probationProgress = Math.min(100, Math.round((totalMonths / 6) * 100));
+  const leaveProgress = Math.min(100, Math.round((totalMonths / 12) * 100));
+
+  return {
+    years,
+    months,
+    totalMonths,
+    formatted,
+    isProbationDone,
+    isLeaveEligible,
+    probationMonthsLeft,
+    leaveMonthsLeft,
+    probationProgress,
+    leaveProgress,
+    startDate
+  };
+}
+
 function calcAge(dob) {
   if (!dob) return null;
   const p = dob.split("/");
@@ -221,8 +360,30 @@ function parseDOB(dob) {
 }
 
 function exportCSV(employees) {
-  const HEADERS = ["ID","Name","Title","Department","Phone","Status","Date of Employment","Date of Birth","NOK Name","NOK Phone","Relationship","Emergency Contact","SSNIT","Bank Account","Ghana Card ID"];
-  const rows = employees.map(e => [e.id,e.name,e.title,e.dept,e.phone,e.status,e.doj,e.dob,e.nokName,e.nokPhone,e.relationship,e.emergencyContact,e.ssnit,e.bankAccount,e.ghanaCardId]);
+  const HEADERS = ["ID","Name","Title","Department","Phone","Status","Date of Employment","Tenure","Probation Completed","Leave Eligible","Date of Birth","NOK Name","NOK Phone","Relationship","Emergency Contact","SSNIT","Bank Account","Ghana Card ID"];
+  const rows = employees.map(e => {
+    const t = calcTenure(e.doj);
+    return [
+      e.id,
+      e.name,
+      e.title,
+      e.dept,
+      e.phone,
+      e.status,
+      e.doj,
+      t ? t.formatted : "N/A",
+      t ? (t.isProbationDone ? "Yes" : `No (${t.probationMonthsLeft}m left)`) : "N/A",
+      t ? (t.isLeaveEligible ? "Yes" : `No (${t.leaveMonthsLeft}m left)`) : "N/A",
+      e.dob,
+      e.nokName,
+      e.nokPhone,
+      e.relationship,
+      e.emergencyContact,
+      e.ssnit,
+      e.bankAccount,
+      e.ghanaCardId
+    ];
+  });
   const csv  = [HEADERS,...rows].map(r => r.map(c => `"${(c||"").replace(/"/g,'""')}"`).join(",")).join("\r\n");
   const url  = URL.createObjectURL(new Blob([csv], { type:"text/csv" }));
   const a    = Object.assign(document.createElement("a"), { href:url, download:"demargo_employees.csv" });
@@ -248,6 +409,11 @@ const Ico = {
   List:     ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
   Alert:    ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   Check:    ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>,
+  CheckCircle: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+  Clock:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  Hourglass: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>,
+  Umbrella: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M22 12a10.06 10.06 0 0 0-20 0Z"/><path d="M12 12v8a2 2 0 0 0 4 0"/><path d="M12 2v1"/></svg>,
+  Lock:     () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
   ID:       ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8L2 7"/><circle cx="9" cy="14" r="2"/><path d="M13 14h4M13 18h4M9 18v-2"/></svg>,
   Gift:     ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5" rx="1"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>,
   File:     ({className="w-4 h-4"}) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
@@ -281,6 +447,56 @@ function StatusBadge({ status }) {
       <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />{status}
     </span>
   );
+}
+
+function LeaveEligibilityBadge({ tenure }) {
+  if (!tenure) return null;
+  if (tenure.isLeaveEligible) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-teal-500/15 text-teal-300 border border-teal-500/30" title="Completed 1+ year. Eligible for annual leave.">
+        <Ico.Umbrella /> Leave Ready (1y+)
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-white/5 text-white/45 border border-white/10" title={`Requires 1 year of service. ${tenure.leaveMonthsLeft} month(s) remaining.`}>
+      <Ico.Lock /> Leave in {tenure.leaveMonthsLeft}m
+    </span>
+  );
+}
+
+function ProbationStatusBadge({ tenure, status }) {
+  if (!tenure) return null;
+  
+  if (status === "Probation") {
+    if (tenure.isProbationDone) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 animate-pulse" title="Completed 6+ months probation. Ready for Full Time review!">
+          <Ico.CheckCircle /> Prob. Done ({tenure.totalMonths}m)
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-sky-500/15 text-sky-300 border border-sky-500/30" title={`${tenure.probationMonthsLeft} month(s) remaining in 6-month probation period.`}>
+        <Ico.Hourglass /> Prob. {tenure.totalMonths}/6m
+      </span>
+    );
+  }
+
+  // If status is Full Time or Contract
+  if (tenure.isProbationDone) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-500/10 text-emerald-400/80 border border-emerald-500/20" title="Completed 6+ months of service">
+        <Ico.CheckCircle /> 6m+ Confirmed
+      </span>
+    );
+  } else {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-sky-500/15 text-sky-300 border border-sky-500/30" title={`${tenure.totalMonths} of 6 initial months`}>
+        <Ico.Hourglass /> &lt;6m ({tenure.totalMonths}/6m)
+      </span>
+    );
+  }
 }
 
 function StatCard({ label, value, color, sub }) {
@@ -533,6 +749,7 @@ function EmployeeDetail({ emp, onClose, onEdit, onDelete }) {
   console.log('EmployeeDetail emp:', emp);
   const [fullscreenImage, setFullscreenImage] = useState(false);
   const age   = calcAge(emp.dob);
+  const tenure = calcTenure(emp.doj);
   const color = DEPT_COLORS[emp.dept] || "#6366f1";
 
   const InfoRow = ({ label, value }) => (
@@ -614,6 +831,88 @@ function EmployeeDetail({ emp, onClose, onEdit, onDelete }) {
           </div>
 
         </div>
+
+        {/* Tenure & Service Milestones Card */}
+        {tenure ? (
+          <div className="rounded-2xl border border-indigo-500/25 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent p-4 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-300">
+                  <Ico.Clock />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-300">Length of Service / Tenure</p>
+                  <p className="text-base font-black text-white">{tenure.formatted} <span className="text-xs text-white/40 font-normal">({tenure.totalMonths} total month{tenure.totalMonths === 1 ? '' : 's'})</span></p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <LeaveEligibilityBadge tenure={tenure} />
+                <ProbationStatusBadge tenure={tenure} status={emp.status} />
+              </div>
+            </div>
+
+            {/* 2 Milestones Progress Bars */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-white/10">
+              {/* 6-Month Probation Milestone */}
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-white/80 flex items-center gap-1.5">
+                    <Ico.Hourglass /> 6-Month Probation
+                  </span>
+                  {tenure.isProbationDone ? (
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      <Ico.CheckCircle /> Completed
+                    </span>
+                  ) : (
+                    <span className="text-sky-300 font-medium">{tenure.probationMonthsLeft} mo left</span>
+                  )}
+                </div>
+                <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full transition-all duration-500 ${tenure.isProbationDone ? 'bg-emerald-500' : 'bg-sky-500'}`}
+                    style={{ width: `${tenure.probationProgress}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-white/40">
+                  {tenure.isProbationDone 
+                    ? 'Completed required 6-month probation period' 
+                    : `${tenure.totalMonths} of 6 months completed`}
+                </p>
+              </div>
+
+              {/* 1-Year Leave Eligibility Milestone */}
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-white/80 flex items-center gap-1.5">
+                    <Ico.Umbrella /> 1-Year Leave Policy
+                  </span>
+                  {tenure.isLeaveEligible ? (
+                    <span className="text-teal-300 font-bold flex items-center gap-1">
+                      <Ico.CheckCircle /> Eligible to Apply
+                    </span>
+                  ) : (
+                    <span className="text-amber-300 font-medium">{tenure.leaveMonthsLeft} mo left</span>
+                  )}
+                </div>
+                <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full transition-all duration-500 ${tenure.isLeaveEligible ? 'bg-teal-400' : 'bg-amber-400'}`}
+                    style={{ width: `${tenure.leaveProgress}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-white/40">
+                  {tenure.isLeaveEligible 
+                    ? 'Qualified (1+ year of continuous service)' 
+                    : `Needs 12 months for leave eligibility (${tenure.totalMonths}/12)`}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-white/8 bg-white/4 p-3 text-center">
+            <p className="text-xs text-white/40 italic">Start date (Date of Employment) not provided for tenure tracking.</p>
+          </div>
+        )}
 
         {/* Next of Kin */}
         <div>
@@ -742,6 +1041,31 @@ function Analytics({ employees }) {
     return m;
   },[employees]);
 
+  const tenureStats = useMemo(()=>{
+    let leaveEligible = 0;
+    let leaveIneligible = 0;
+    let probationPassed = 0;
+    let inProbation = 0;
+    let probationReviewNeeded = 0;
+
+    employees.forEach(e => {
+      const t = calcTenure(e.doj);
+      if (t) {
+        if (t.isLeaveEligible) leaveEligible++;
+        else leaveIneligible++;
+
+        if (t.isProbationDone) {
+          probationPassed++;
+          if (e.status === "Probation") probationReviewNeeded++;
+        } else {
+          inProbation++;
+        }
+      }
+    });
+
+    return { leaveEligible, leaveIneligible, probationPassed, inProbation, probationReviewNeeded };
+  }, [employees]);
+
   const maxCount = byDept[0]?.[1] || 1;
   const ssnitCount = employees.filter(e=>e.ssnit).length;
 
@@ -761,6 +1085,57 @@ function Analytics({ employees }) {
             </div>
           );
         })}
+      </div>
+
+      {/* Service & Policy Eligibility Breakdown */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Leave Eligibility */}
+        <div className="rounded-2xl border border-teal-500/20 bg-teal-500/5 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-bold uppercase tracking-widest text-teal-400 flex items-center gap-2">
+              <Ico.Umbrella /> Annual Leave Eligibility (1+ Year)
+            </p>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 font-bold">
+              {Math.round((tenureStats.leaveEligible / (employees.length || 1)) * 100)}% Eligible
+            </span>
+          </div>
+          <p className="text-3xl font-black text-white" style={{ fontFamily:"'Playfair Display',serif" }}>
+            {tenureStats.leaveEligible} <span className="text-sm font-normal text-white/50">of {employees.length} employees</span>
+          </p>
+          <div className="mt-3 h-2.5 rounded-full bg-white/10 overflow-hidden">
+            <div className="h-full rounded-full bg-teal-400 transition-all duration-700" style={{ width: `${Math.round((tenureStats.leaveEligible / (employees.length || 1)) * 100)}%` }} />
+          </div>
+          <p className="text-xs text-white/40 mt-2">
+            {tenureStats.leaveIneligible} employee(s) are currently within their first year of service.
+          </p>
+        </div>
+
+        {/* 6-Month Probation Breakdown */}
+        <div className="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-bold uppercase tracking-widest text-sky-400 flex items-center gap-2">
+              <Ico.Hourglass /> 6-Month Probation Status
+            </p>
+            {tenureStats.probationReviewNeeded > 0 ? (
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold animate-pulse">
+                {tenureStats.probationReviewNeeded} Ready for Review
+              </span>
+            ) : (
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-bold">
+                {tenureStats.inProbation} in active probation
+              </span>
+            )}
+          </div>
+          <p className="text-3xl font-black text-white" style={{ fontFamily:"'Playfair Display',serif" }}>
+            {tenureStats.probationPassed} <span className="text-sm font-normal text-white/50">completed 6+ months</span>
+          </p>
+          <div className="mt-3 h-2.5 rounded-full bg-white/10 overflow-hidden">
+            <div className="h-full rounded-full bg-sky-400 transition-all duration-700" style={{ width: `${Math.round((tenureStats.probationPassed / (employees.length || 1)) * 100)}%` }} />
+          </div>
+          <p className="text-xs text-white/40 mt-2">
+            {tenureStats.inProbation} employee(s) actively working towards the 6-month probation milestone.
+          </p>
+        </div>
       </div>
 
       {/* Dept bar chart */}
@@ -989,6 +1364,7 @@ export default function App() {
   const [search,       setSearch]       = useState("");
   const [deptFilter,   setDeptFilter]   = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [tenureFilter, setTenureFilter] = useState("All");
   const [strikeFilter, setStrikeFilter] = useState("All");
   const [viewMode,     setViewMode]     = useState("grid");
   const [tab,          setTab]          = useState("employees");
@@ -1019,27 +1395,53 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  const showToast = (msg, type="success") => {
+  const showToast = (msg, type = "success") => {
     setToast({ msg, type });
-    setTimeout(()=>setToast(null), 3200);
+    setTimeout(() => setToast(null), 3200);
   };
 
-  const filtered = useMemo(()=>employees.filter(e=>{
+  const filtered = useMemo(() => employees.filter(e => {
     const q = search.toLowerCase();
-    return (
-      (!q || e.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q) || e.title.toLowerCase().includes(q) || e.dept.toLowerCase().includes(q) || e.phone.includes(q)) &&
-      (deptFilter   === "All" || e.dept   === deptFilter) &&
-      (statusFilter === "All" || e.status === statusFilter) &&
-      (strikeFilter === "All" || (strikeFilter === "Yes" && e.hasStrike) || (strikeFilter === "No" && !e.hasStrike))
-    );
-  }), [employees, search, deptFilter, statusFilter, strikeFilter]);
+    const t = calcTenure(e.doj);
+    const matchesSearch = !q || e.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q) || e.title.toLowerCase().includes(q) || e.dept.toLowerCase().includes(q) || e.phone.includes(q);
+    const matchesDept   = deptFilter === "All" || e.dept === deptFilter;
+    const matchesStatus = statusFilter === "All" || e.status === statusFilter;
+    const matchesStrike = strikeFilter === "All" || (strikeFilter === "Yes" && e.hasStrike) || (strikeFilter === "No" && !e.hasStrike);
 
-  const stats = useMemo(()=>({
-    total:     employees.length,
-    fullTime:  employees.filter(e=>e.status==="Full Time").length,
-    contract:  employees.filter(e=>e.status==="Contract").length,
-    probation: employees.filter(e=>e.status==="Probation").length,
-  }), [employees]); 
+    let matchesTenure = true;
+    if (tenureFilter === "LeaveEligible") matchesTenure = t?.isLeaveEligible;
+    else if (tenureFilter === "LeaveIneligible") matchesTenure = t && !t.isLeaveEligible;
+    else if (tenureFilter === "ProbationDone") matchesTenure = t?.isProbationDone;
+    else if (tenureFilter === "InProbation") matchesTenure = t && !t.isProbationDone;
+    else if (tenureFilter === "ProbationReviewNeeded") matchesTenure = t?.isProbationDone && e.status === "Probation";
+
+    return matchesSearch && matchesDept && matchesStatus && matchesStrike && matchesTenure;
+  }), [employees, search, deptFilter, statusFilter, strikeFilter, tenureFilter]);
+
+  const stats = useMemo(() => {
+    let leaveEligibleCount = 0;
+    let probationPassedCount = 0;
+    let activeProbationCount = 0;
+
+    employees.forEach(e => {
+      const t = calcTenure(e.doj);
+      if (t) {
+        if (t.isLeaveEligible) leaveEligibleCount++;
+        if (t.isProbationDone) probationPassedCount++;
+        else activeProbationCount++;
+      }
+    });
+
+    return {
+      total:           employees.length,
+      fullTime:        employees.filter(e=>e.status==="Full Time").length,
+      contract:        employees.filter(e=>e.status==="Contract").length,
+      probation:       employees.filter(e=>e.status==="Probation").length,
+      leaveEligible:   leaveEligibleCount,
+      probationPassed: probationPassedCount,
+      activeProbation: activeProbationCount,
+    };
+  }, [employees]); 
 
   // Handlers — use employee's own ID as the stable Firebase key
   const handleSave = async (form) => {
@@ -1139,10 +1541,10 @@ export default function App() {
               <>
                 {/* STAT CARDS */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <StatCard label="Total Employees" value={stats.total}     color="#6366f1" />
-                  <StatCard label="Full Time"        value={stats.fullTime}  color="#10b981" />
+                  <StatCard label="Total Employees" value={stats.total}     color="#6366f1" sub={`${stats.leaveEligible} leave eligible (1y+)`} />
+                  <StatCard label="Full Time"        value={stats.fullTime}  color="#10b981" sub={`${stats.probationPassed} passed probation (6m+)`} />
                   <StatCard label="Contract"         value={stats.contract}  color="#f59e0b" />
-                  <StatCard label="Probation"        value={stats.probation} color="#3b82f6" />
+                  <StatCard label="Probation"        value={stats.probation} color="#3b82f6" sub={`${stats.activeProbation} in initial 6 months`} />
                 </div>
 
                 {/* FILTER BAR */}
@@ -1150,7 +1552,7 @@ export default function App() {
                   <div className="relative flex-1 min-w-[200px]">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35 pointer-events-none"><Ico.Search /></div>
                     <input value={search} onChange={e=>setSearch(e.target.value)}
-                      placeholder="Search by name, ID, role, department�"
+                      placeholder="Search by name, ID, role, department…"
                       className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/28 outline-none focus:border-indigo-500 transition-colors" />
                   </div>
                   <select value={deptFilter} onChange={e=>setDeptFilter(e.target.value)}
@@ -1160,6 +1562,15 @@ export default function App() {
                   <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}
                     className="rounded-xl border border-white/10 bg-[#0c0f1a] px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-colors">
                     {ALL_STATUSES.map(s=><option key={s}>{s}</option>)}
+                  </select>
+                  <select value={tenureFilter} onChange={e=>setTenureFilter(e.target.value)}
+                    className="rounded-xl border border-white/10 bg-[#0c0f1a] px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-colors">
+                    <option value="All">All Service & Leave Statuses</option>
+                    <option value="LeaveEligible">🌴 Leave Eligible (≥ 1 Year)</option>
+                    <option value="LeaveIneligible">🔒 Not Leave Eligible (&lt; 1 Year)</option>
+                    <option value="ProbationDone">✅ Completed Probation (≥ 6 Mos)</option>
+                    <option value="InProbation">⏳ Active Probation (&lt; 6 Mos)</option>
+                    <option value="ProbationReviewNeeded">⚠️ Probation Ended (Review for Full-Time)</option>
                   </select>
                   <select value={strikeFilter} onChange={e=>setStrikeFilter(e.target.value)}
                     className="rounded-xl border border-white/10 bg-[#0c0f1a] px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-colors">
@@ -1181,7 +1592,7 @@ export default function App() {
 
                 {filtered.length === 0 && (
                   <div className="text-center py-20">
-                    <p className="text-6xl mb-4">??</p>
+                    <p className="text-6xl mb-4">👥</p>
                     <p className="text-lg font-bold text-white/60">No employees found</p>
                     <p className="text-sm text-white/30 mt-1">Try adjusting your search or filters</p>
                   </div>
@@ -1191,6 +1602,7 @@ export default function App() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filtered.map((emp, i)=>{
                       const color = DEPT_COLORS[emp.dept] || "#6366f1";
+                      const tenure = calcTenure(emp.doj);
                       return (
                         <div key={emp.id}
                           className={`card-anim group relative rounded-2xl border bg-white/4 hover:bg-white/6 transition-all duration-200 cursor-pointer overflow-hidden ${emp.hasStrike ? "border-red-500/40 hover:border-red-500/60 shadow-[0_0_15px_rgba(239,68,68,0.1)]" : "border-white/8 hover:border-white/18"}`}
@@ -1208,12 +1620,14 @@ export default function App() {
                               </div>
                               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={e=>e.stopPropagation()}>
                                 <button onClick={()=>setModal({ type:"edit", emp })}
-                                  className="p-1.5 rounded-lg hover:bg-white/12 text-white/45 hover:text-white transition-colors"><Ico.Edit /></button>
+                                  className="p-1.5 rounded-lg hover:bg-white/12 text-white/45 hover:text-white transition-colors" title="Edit Employee"><Ico.Edit /></button>
                                 <button onClick={()=>handleDelete(emp)}
-                                  className="p-1.5 rounded-lg hover:bg-red-500/15 text-white/45 hover:text-red-400 transition-colors"><Ico.Trash /></button>
+                                  className="p-1.5 rounded-lg hover:bg-red-500/15 text-white/45 hover:text-red-400 transition-colors" title="Delete Employee"><Ico.Trash /></button>
                               </div>
                             </div>
-                            <div className="flex items-center justify-between gap-2 flex-wrap">
+
+                            {/* Department & Status & Strike */}
+                            <div className="flex items-center justify-between gap-2 flex-wrap mb-2.5">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <StatusBadge status={emp.status} />
                                 {emp.hasStrike && (
@@ -1226,7 +1640,33 @@ export default function App() {
                                 <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background:color }} />{emp.dept}
                               </span>
                             </div>
-                            <div className="mt-2.5 space-y-1">
+
+                            {/* Tenure & Service Milestones Badges */}
+                            {tenure ? (
+                              <div className="rounded-xl border border-white/8 bg-white/4 p-2.5 space-y-2 mb-2.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-bold text-white/70 flex items-center gap-1.5">
+                                    <Ico.Clock />
+                                    <span className="text-indigo-300 font-extrabold">{tenure.formatted}</span>
+                                    <span className="text-[10px] text-white/35">tenure</span>
+                                  </span>
+                                  <span className="text-[10px] text-white/40 font-mono">
+                                    {tenure.totalMonths} mo{tenure.totalMonths === 1 ? '' : 's'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <ProbationStatusBadge tenure={tenure} status={emp.status} />
+                                  <LeaveEligibilityBadge tenure={tenure} />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="rounded-xl border border-white/5 bg-white/2 p-2 mb-2.5 text-center">
+                                <span className="text-[11px] text-white/30 italic">No start date provided</span>
+                              </div>
+                            )}
+
+                            {/* Contact & Join Date */}
+                            <div className="space-y-1 pt-1 border-t border-white/5">
                               {emp.phone && <p className="flex items-center gap-1.5 text-xs text-white/30"><Ico.Phone />{emp.phone}</p>}
                               {emp.doj   && <p className="flex items-center gap-1.5 text-xs text-white/30"><Ico.Calendar />Joined {emp.doj}</p>}
                             </div>
@@ -1241,45 +1681,64 @@ export default function App() {
                   <div className="rounded-2xl border border-white/10 bg-white/4 overflow-hidden">
                     <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-3 border-b border-white/8 text-xs font-bold uppercase tracking-widest text-white/30">
                       <div className="col-span-1">ID</div>
-                      <div className="col-span-4">Employee</div>
+                      <div className="col-span-3">Employee</div>
                       <div className="col-span-2">Department</div>
-                      <div className="col-span-2">Status</div>
-                      <div className="col-span-2">Phone</div>
+                      <div className="col-span-1">Status</div>
+                      <div className="col-span-3">Tenure & Milestones</div>
+                      <div className="col-span-1">Phone</div>
                       <div className="col-span-1">Actions</div>
                     </div>
-                    {filtered.map(emp=>(
-                      <div key={emp.id}
-                        className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-white/5 hover:bg-white/4 transition-colors cursor-pointer items-center"
-                        onClick={()=>setModal({ type:"view", emp })}>
-                        <div className="col-span-1 text-xs font-mono text-white/35 truncate">{emp.id}</div>
-                        <div className="col-span-4 flex items-center gap-2 min-w-0">
-                          <Avatar name={emp.name} dept={emp.dept} size="sm" image={emp.image} />
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-white truncate flex items-center gap-1.5">
-                              {emp.name}
-                              {emp.hasStrike && (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black tracking-wider uppercase border border-red-500/30 bg-red-500/10 text-red-400">
-                                  Strike
-                                </span>
-                              )}
-                            </p>
-                            <p className="text-xs text-white/40 truncate">{emp.title}</p>
+                    {filtered.map(emp=>{
+                      const tenure = calcTenure(emp.doj);
+                      return (
+                        <div key={emp.id}
+                          className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-white/5 hover:bg-white/4 transition-colors cursor-pointer items-center"
+                          onClick={()=>setModal({ type:"view", emp })}>
+                          <div className="col-span-1 text-xs font-mono text-white/35 truncate">{emp.id}</div>
+                          <div className="col-span-3 flex items-center gap-2 min-w-0">
+                            <Avatar name={emp.name} dept={emp.dept} size="sm" image={emp.image} />
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-white truncate flex items-center gap-1.5">
+                                {emp.name}
+                                {emp.hasStrike && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black tracking-wider uppercase border border-red-500/30 bg-red-500/10 text-red-400">
+                                    Strike
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-xs text-white/40 truncate">{emp.title}</p>
+                            </div>
+                          </div>
+                          <div className="col-span-2 hidden md:flex items-center gap-1.5 text-xs text-white/50">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background:DEPT_COLORS[emp.dept]||"#6366f1" }} />
+                            <span className="truncate">{emp.dept}</span>
+                          </div>
+                          <div className="col-span-1 hidden md:block"><StatusBadge status={emp.status} /></div>
+                          <div className="col-span-3 hidden md:block">
+                            {tenure ? (
+                              <div className="space-y-1">
+                                <p className="text-xs font-bold text-indigo-300 flex items-center gap-1">
+                                  <Ico.Clock /> {tenure.formatted}
+                                </p>
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <ProbationStatusBadge tenure={tenure} status={emp.status} />
+                                  <LeaveEligibilityBadge tenure={tenure} />
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-white/30">—</span>
+                            )}
+                          </div>
+                          <div className="col-span-1 hidden md:block text-xs text-white/40 truncate">{emp.phone||"—"}</div>
+                          <div className="col-span-1 flex gap-1" onClick={e=>e.stopPropagation()}>
+                            <button onClick={()=>setModal({ type:"edit", emp })}
+                              className="p-1.5 rounded-lg hover:bg-white/10 text-white/38 hover:text-white transition-colors" title="Edit Employee"><Ico.Edit /></button>
+                            <button onClick={()=>handleDelete(emp)}
+                              className="p-1.5 rounded-lg hover:bg-red-500/15 text-white/38 hover:text-red-400 transition-colors" title="Delete Employee"><Ico.Trash /></button>
                           </div>
                         </div>
-                        <div className="col-span-2 hidden md:flex items-center gap-1.5 text-xs text-white/50">
-                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background:DEPT_COLORS[emp.dept]||"#6366f1" }} />
-                          <span className="truncate">{emp.dept}</span>
-                        </div>
-                        <div className="col-span-2 hidden md:block"><StatusBadge status={emp.status} /></div>
-                        <div className="col-span-2 hidden md:block text-xs text-white/40 truncate">{emp.phone||"�"}</div>
-                        <div className="col-span-1 flex gap-1" onClick={e=>e.stopPropagation()}>
-                          <button onClick={()=>setModal({ type:"edit", emp })}
-                            className="p-1.5 rounded-lg hover:bg-white/10 text-white/38 hover:text-white transition-colors"><Ico.Edit /></button>
-                          <button onClick={()=>handleDelete(emp)}
-                            className="p-1.5 rounded-lg hover:bg-red-500/15 text-white/38 hover:text-red-400 transition-colors"><Ico.Trash /></button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </>
@@ -1308,26 +1767,3 @@ export default function App() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
